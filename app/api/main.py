@@ -1,4 +1,9 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
+from pathlib import Path
+
+from app.models import ScanResponse
+from app.core.scanner import scan_repo
 
 app = FastAPI(title="Green Cloud Repository Scanner")
 
@@ -10,6 +15,16 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
-@app.get("/version")
-async def version():
-    return {"version": "0.1.0"}
+class ScanParams(BaseModel):
+    root: str
+
+@app.post("/scan", response_model=ScanResponse)
+def scan(params: ScanParams):
+    root = Path(params.root).resolve()
+    records = scan_repo(root)
+    return ScanResponse(
+        records=records,
+        root=str(root),
+        scanned_count=len(records),
+        skipped_count=0
+    )
