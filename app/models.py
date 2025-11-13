@@ -15,3 +15,11 @@ class FileRecord(BaseModel):
     dependency_kind: Optional[str] = None  # e.g., "python-requirements", "npm-package"
     size_bytes: int
     is_binary: bool
+
+class ScanResponse(BaseModel):
+    """Response model containing scan results for a repository."""
+
+    records: List[FileRecord]
+    root: str
+    scanned_count: int
+    skipped_count: int
