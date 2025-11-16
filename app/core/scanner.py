@@ -1,9 +1,12 @@
 from __future__ import annotations
+
 import os
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Optional
-from app.models import FileRecord
+
 from app.logger import setup_logging
+from app.models import FileRecord
+
 logger = setup_logging(log_level="DEBUG")
 
 # ---- Configuration ----
@@ -19,7 +22,7 @@ SKIP_DIRS = {
     "tmp",
     ".pytest_cache",
     ".mypy_cache",
-    ".vscode"
+    ".vscode",
 }
 
 # Simple lists for quick binary/data detection
@@ -33,28 +36,27 @@ BINARY_EXTENSIONS = {
     ".ico",
     ".webp",
     ".svg",
-
     ".zip",
     ".tar",
     ".gz",
     ".bz2",
     ".rar",
     ".7z",
-
     ".pdf",
-    ".exe",".dll",".so",".dylib",".ttf",".otf",".woff",".woff2",".mp4",".mov",".avi"    
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".ttf",
+    ".otf",
+    ".woff",
+    ".woff2",
+    ".mp4",
+    ".mov",
+    ".avi",
 }
 
-DATA_EXTENSIONS = {
-    ".csv",
-    ".jsonl",
-    ".xml",
-    ".tsv",
-    ".parquet",
-    ".sqlite",
-    ".db",
-    ".ndjson"
-}
+DATA_EXTENSIONS = {".csv", ".jsonl", ".xml", ".tsv", ".parquet", ".sqlite", ".db", ".ndjson"}
 
 # Language map (for "code" category)
 LANGUAGE_BY_EXT = {
@@ -84,25 +86,38 @@ LANGUAGE_BY_EXT = {
     ".swift": "swift",
     ".ts": "typescript",
     ".tsx": "typescript",
-    ".vb": "vb"
+    ".vb": "vb",
 }
 
 # Category by extension (baseline)
 CATEGORY_BY_EXT = {
     # code
-    **{ext:"code" for ext in LANGUAGE_BY_EXT.keys()},
+    **dict.fromkeys(LANGUAGE_BY_EXT, "code"),
     # config
-    ".yml":"config",".yaml":"config",".json":"config",".toml":"config",".ini":"config",".cfg":"config",".conf":"config",
+    ".yml": "config",
+    ".yaml": "config",
+    ".json": "config",
+    ".toml": "config",
+    ".ini": "config",
+    ".cfg": "config",
+    ".conf": "config",
     # docs
-    ".md":"documentation",".rst":"documentation",".txt":"documentation",".adoc":"documentation",
+    ".md": "documentation",
+    ".rst": "documentation",
+    ".txt": "documentation",
+    ".adoc": "documentation",
     # scripts
-    ".sh":"script",".ps1":"script",".bat":"script",".cmd":"script",
+    ".sh": "script",
+    ".ps1": "script",
+    ".bat": "script",
+    ".cmd": "script",
     # infrastructure
-    ".tf":"infrastructure",".dockerfile":"infrastructure",
+    ".tf": "infrastructure",
+    ".dockerfile": "infrastructure",
     # data
-    **{ext:"data" for ext in DATA_EXTENSIONS},
+    **dict.fromkeys(DATA_EXTENSIONS, "data"),
     # assets (fallback: binary handled via is_binary_ext)
-    ".svg":"asset",
+    ".svg": "asset",
 }
 
 # CI/CD filenames (no extension or special names)
@@ -141,8 +156,9 @@ def is_binary_ext(ext: str) -> bool:
     """
     return ext in BINARY_EXTENSIONS
 
+
 def is_data_ext(ext: str) -> bool:
-    """ Check if a file extension is in the list of data extensions.
+    """Check if a file extension is in the list of data extensions.
 
     Args:
         ext: File extension to check.
@@ -151,6 +167,7 @@ def is_data_ext(ext: str) -> bool:
         True if the extension is in the list of data extensions, False otherwise.
     """
     return ext in DATA_EXTENSIONS
+
 
 # ---- Shebang detection ----
 # def detect_shebang_language(p: Path) -> Optional[str]:
@@ -169,9 +186,9 @@ def is_data_ext(ext: str) -> bool:
 #         return None
 #     if not first_line.startswith('#!'):
 #         return None
-#     if "python" in first_line: 
+#     if "python" in first_line:
 #         return "python"
-#     if "bash" in first_line or "sh" in first_line: 
+#     if "bash" in first_line or "sh" in first_line:
 #         return "bash"
 #     if "node" in first_line:
 #         return "javascript"
@@ -180,7 +197,6 @@ def is_data_ext(ext: str) -> bool:
 #     if "perl" in first_line:
 #         return "perl"
 #     return None
-
 
 
 # def scan_repo(repo_root: Path) -> List[FileRecord]:
@@ -192,7 +208,7 @@ def is_data_ext(ext: str) -> bool:
 #     Returns:
 #         A list of FileRecord objects for all files in the repository.
 #     """
-    
+
 #     records: List[FileRecord] = []
 #     for path in walk_files(repo_root):
 #         ext = path.suffix.lower()
@@ -203,7 +219,7 @@ def is_data_ext(ext: str) -> bool:
 #         size_bytes = path.stat().st_size
 #         is_binary = is_binary_ext(ext)
 #         relative_dir = path.parent.relative_to(repo_root).as_posix() if path.parent != repo_root else "."
-                
+
 #         records.append(FileRecord(
 #             relative_dir=relative_dir,
 #             name=path.name,
@@ -214,6 +230,7 @@ def is_data_ext(ext: str) -> bool:
 #             is_binary=is_binary,
 #         ))
 #         return records
+
 
 def walk_the_repo(repo_root: Path) -> Iterable[str]:
     """Walk the repository and yield all files that are not in the skip directories.
@@ -226,15 +243,17 @@ def walk_the_repo(repo_root: Path) -> Iterable[str]:
     """
     logger.debug("walk_the_repo() is walking the repository starting at repo_root: %s", repo_root)
     for dirpath, subdirectories, filenames in os.walk(repo_root):
-
-        subdirectories[:] = [d for d in subdirectories if d not in SKIP_DIRS ] # TODO: skip what's in .gitignore
+        subdirectories[:] = [
+            d for d in subdirectories if d not in SKIP_DIRS
+        ]  # TODO: skip what's in .gitignore
         for fname in filenames:
             yield Path(dirpath) / fname
 
     logger.debug("walk_the_repo() is finished walking the repository")
 
+
 # ---- working through the Main scan function ----
-def scan_learning_repo(repo_root: Path) -> List[FileRecord]:
+def scan_learning_repo(repo_root: Path) -> list[FileRecord]:
     """Scan the learning repository and return a list of file records.
 
     Args:
@@ -243,14 +262,16 @@ def scan_learning_repo(repo_root: Path) -> List[FileRecord]:
     Returns:
         A list of FileRecord objects for all files in the repository.
     """
-    
+
     logger.debug("scan_learning_repo(): start")
     logger.debug("scan_learning_repo(): calling walk_the_repo")
-    
-    file_records: List[FileRecord] = []
+
+    file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root)
     for filename in filenames:
-        logger.debug("\tscan_learning_repo(): received yield from walk_the_repo(): filename: %s", filename)
+        logger.debug(
+            "\tscan_learning_repo(): received yield from walk_the_repo(): filename: %s", filename
+        )
         relative_dir = filename.relative_to(repo_root).as_posix()
         name = filename.name
         extension = filename.suffix.lower()
@@ -268,6 +289,6 @@ def scan_learning_repo(repo_root: Path) -> List[FileRecord]:
             size_bytes=size_bytes,
         )
         file_records.append(new_file_record)
-        
+
     logger.debug("scan_learning_repo(): end")
     return file_records
