@@ -20,7 +20,6 @@ class FileRecord(BaseModel):
 class ScanResponse(BaseModel):
     """Response model containing scan results for a repository."""
 
-    records: list[FileRecord]
-    root: str
+    repo_root: str
     scanned_count: int
     skipped_count: int
