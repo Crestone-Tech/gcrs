@@ -26,21 +26,36 @@ async def health():
 
 
 class ScanParams(BaseModel):
-    root: str
+    repo_root: str
 
 
 @app.get("/file/slr")
-async def scan_learning_repository(directory: str = ".") -> ScanResponse:
-    logger.debug("method: scan_learning_repository() starting at directory: %s", directory)
-    file_records = scan_learning_repo(Path(directory))
+async def scan_learning_repository(repo_root: str = ".") -> ScanResponse:
+    logger.debug("method: scan_learning_repository() starting at directory: %s", repo_root)
+    repo_root_path = Path(repo_root)
+    if not repo_root_path.exists() or not repo_root_path.is_dir():
+        logger.error("Directory does not exist: %s", repo_root)
+        return ScanResponse(
+            status="error",
+            records=[],
+            repo_root=str(repo_root_path.resolve()),
+            scanned_count=97,
+            skipped_count=0,
+        )
+    file_records = scan_learning_repo(repo_root_path)
     logger.debug(
         "method: scan_learning_repository() finished scanning repository, found %d file records",
         len(file_records),
     )
+    # create output directory if it doesn't exist
+    output_dir = repo_root_path / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    # save file records to output directory
+    
+    # create response
     response = ScanResponse(
         status="success",
-        records=file_records,
-        root=str(Path(directory).resolve()),
+        repo_root=str(repo_root_path.resolve()),
         scanned_count=len(file_records),
         skipped_count=0,
     )
