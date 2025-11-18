@@ -37,11 +37,11 @@ class SummaryResponse(BaseModel):
 class RepositorySummary(BaseModel):
     """Information about the repository."""
 
-    language_files: dict[str, int] # number of files by language
-    category_files: dict[str, int] # number of files by category
-    technology_files: dict[str, int] # number of files by technology
-    dependency_files: dict[str, int] # number of files by dependency
-    file_extensions: dict[str, int] # number of files by file extension
+    files_by_language: dict[str, int]  # number of files by language
+    files_by_category: dict[str, int]  # number of files by category
+    files_by_technology: dict[str, int]  # number of files by technology
+    files_by_dependency: dict[str, int]  # number of files by dependency
+    files_by_extension: dict[str, int]  # number of files by file extension
     total_files: int = 0
     scanned_files: int = 0
     skipped_files: int = 0

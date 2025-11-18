@@ -257,18 +257,14 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
     file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root_path)
     summary = RepositorySummary(
-        language_files={},
-        category_files={},
-        technology_files={},
-        dependency_files={},
-        file_extensions={},
-        total_files=0,
-        scanned_files=0,
-        skipped_files=0,
-        summary="",
+        files_by_language={},
+        files_by_category={},
+        files_by_technology={},
+        files_by_dependency={},
+        files_by_extension={}
     )
-    
     for filename in filenames:
+        summary.total_files += 1  # count files as we iterate
         relative_dir = filename.relative_to(repo_root_path).as_posix()
         name = filename.name
         extension = filename.suffix.lower()
@@ -286,13 +282,13 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
             size_bytes=size_bytes,
         )
         file_records.append(new_file_record)
-        summary.scanned_files += 1
+        
         if language:
-         summary.language_files[language] = 1
+            summary.files_by_language[language] = summary.files_by_language.get(language, 0) + 1
         if category:
-         summary.category_files[category] = 1
+            summary.files_by_category[category] = summary.files_by_category.get(category, 0) + 1
         if extension:
-         summary.file_extensions[extension] = 1
+            summary.files_by_extension[extension] = summary.files_by_extension.get(extension, 0) + 1
     logger.debug("scan_repo(): end")
     return file_records, summary
 
