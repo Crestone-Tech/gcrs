@@ -27,5 +27,9 @@ class ScanResponse(BaseModel):
 class SummaryResponse(BaseModel):
     """Response model containing summary results for a repository."""
 
-    repo_root: str
-    summary: str
+    status: str
+    summary: str | None = None # summary of the repository contents. If the summary generation failed, this will be None.
+    repo_root: str # path to the root of the repository
+    files_scanned: int | None = None  # number of files scanned
+    files_skipped: int | None = None  # number of files skipped
+    error: str | None = None  # error message if the summary generation failed

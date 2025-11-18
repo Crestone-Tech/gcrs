@@ -31,26 +31,25 @@ class ScanParams(BaseModel):
 @app.post("/scan/summary")
 async def generate_repo_summary(repo_root: str = ".", output_dir: str = "output") -> SummaryResponse:
     logger.debug("method: generate_repo_summary() starting at directory: %s", repo_root)
-    logger.debug("method: generate_repo_summary() output directory: %s", output_dir)
+
     repo_root_path = Path(repo_root)
+    output_dir_path = repo_root_path / output_dir
+    output_dir_path.mkdir(parents=True, exist_ok=True)
     # check if repo root directory exists
     if not repo_root_path.exists() or not repo_root_path.is_dir():
         logger.error("Directory does not exist: %s", repo_root)
         return SummaryResponse(
             status="error",
-            summary="flooee",
+            error="Directory does not exist",
+            summary=None,
+            files_scanned=None,
+            files_skipped=None,
             repo_root=str(repo_root_path.resolve()),
-            scanned_count=0,
-            skipped_count=0,
         )
     # summarize the repository content
-    summary = summarize_repo_contents(repo_root_path)
-    logger.debug("method: generate_repo_summary() finished summarizing repository content")
-    return SummaryResponse(
-        status="success",
-        summary=summary,
-        repo_root=str(repo_root_path.resolve()),
-    )
+    summary_response  = summarize_repo_contents(repo_root_path = repo_root_path, output_dir_path = output_dir_path)
+    logger.debug("method: generate_repo_summary() finished summarizing repository content, status: %s", summary_response.status)
+    return summary_response
 
 @app.get("/file/slr")
 async def scan_learning_repository(repo_root: str = ".", output_dir: str = "output") -> ScanResponse:

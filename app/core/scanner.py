@@ -5,7 +5,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 from app.logger import setup_logging
-from app.models import FileRecord
+from app.models import FileRecord, SummaryResponse
 
 logger = setup_logging(log_level="DEBUG")
 
@@ -252,43 +252,84 @@ def walk_the_repo(repo_root: Path) -> Iterable[str]:
     logger.debug("walk_the_repo() is finished walking the repository")
 
 # ---- the Summary function ----
-def summarize_repo_contents(repo_root: Path) -> str:
+def parse_summary(file_records: list[FileRecord]) -> str:
+    """Parse the summary of the repository contents.
+
+    Args:
+        file_records: List of FileRecord objects.
+
+    Returns:
+        A string summarizing the contents of the repository.
+    """
+    logger.debug("parse_summary(): start")
+    logger.debug("parse_summary(): parsing summary of %d file records", len(file_records))
+    summary = "Repository contents summarized"
+    summary_lines = ["foo", "bar", "baz"]
+    #for file_record in file_records:
+     #   summary_lines.append(f"{file_record.relative_dir}/{file_record.name}")
+    summary = "\n".join(summary_lines)
+    logger.debug("parse_summary(): finished parsing summary of %d file records", len(file_records))
+    return summary
+
+def write_summary_to_file(summary: str, output_dir_path: Path):
+    """Write the summary to a file.
+
+    Args:
+        summary: String summary of the repository contents.
+        output_dir_path: Path to the output directory.
+    """
+    summary_file_path = output_dir_path / "summary.txt"
+    logger.debug("write_summary_to_file(): writing summary to file: %s", summary_file_path)
+    with open(summary_file_path, "w", encoding="utf-8") as f:
+        f.write(summary)
+    logger.debug("write_summary_to_file(): finished writing summary to file: %s", summary_file_path)
+
+def summarize_repo_contents(repo_root_path: Path, output_dir_path: Path) -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Args:
-        repo_root: Path to the root of the repository.
+        repo_root_path: Path to the root of the repository.
+        output_dir_path: Path to the output directory.
 
     Returns:
         A string summarizing the contents of the repository.
     """
     logger.debug("summarize_repo_contents(): start")
-    logger.debug("summarize_repo_contents(): calling walk_the_repo")
 
-    file_records = scan_repo(repo_root)
+    file_records = scan_repo(repo_root_path)
     logger.debug("summarize_repo_contents(): finished scanning repository, found %d file records", len(file_records))
-    return "Repository contents summarized"
+    summary = parse_summary(file_records)
+    logger.debug("summarize_repo_contents(): finished parsing summary, summary: %s", summary)
+    write_summary_to_file(summary, output_dir_path)
+    return SummaryResponse(
+        status="success",
+        summary=summary,
+        repo_root=str(repo_root_path.resolve()),
+        files_scanned=len(file_records),
+        files_skipped=0,
+    )
     
 # ---- the Main scan function ----
-def scan_repo(repo_root: Path) -> list[FileRecord]:
+def scan_repo(repo_root_path: Path) -> list[FileRecord]:
     """Scan the learning repository and return a list of file records.
 
     Args:
-        repo_root: Path to the root of the repository.
+        repo_root_path: Path to the root of the repository.
 
     Returns:
         A list of FileRecord objects for all files in the repository.
     """
 
-    logger.debug("scan_learning_repo(): start")
-    logger.debug("scan_learning_repo(): calling walk_the_repo")
+    logger.debug("scan_repo(): start")
+    logger.debug("scan_repo(): calling walk_the_repo")
 
     file_records: list[FileRecord] = []
-    filenames = walk_the_repo(repo_root)
+    filenames = walk_the_repo(repo_root_path)
     for filename in filenames:
         logger.debug(
-            "\tscan_learning_repo(): received yield from walk_the_repo(): filename: %s", filename
+            "\tscan_repo(): received yield from walk_the_repo(): filename: %s", filename
         )
-        relative_dir = filename.relative_to(repo_root).as_posix()
+        relative_dir = filename.relative_to(repo_root_path).as_posix()
         name = filename.name
         extension = filename.suffix.lower()
         language = LANGUAGE_BY_EXT.get(extension, "unknown")
@@ -306,5 +347,5 @@ def scan_repo(repo_root: Path) -> list[FileRecord]:
         )
         file_records.append(new_file_record)
 
-    logger.debug("scan_learning_repo(): end")
+    logger.debug("scan_repo(): end")
     return file_records
