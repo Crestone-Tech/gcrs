@@ -23,3 +23,9 @@ class ScanResponse(BaseModel):
     repo_root: str
     scanned_count: int
     skipped_count: int
+
+class SummaryResponse(BaseModel):
+    """Response model containing summary results for a repository."""
+
+    repo_root: str
+    summary: str
