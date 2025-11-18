@@ -251,9 +251,25 @@ def walk_the_repo(repo_root: Path) -> Iterable[str]:
 
     logger.debug("walk_the_repo() is finished walking the repository")
 
+# ---- the Summary function ----
+def summarize_repo_contents(repo_root: Path) -> str:
+    """Summarize the contents of the repository.
 
-# ---- working through the Main scan function ----
-def scan_learning_repo(repo_root: Path) -> list[FileRecord]:
+    Args:
+        repo_root: Path to the root of the repository.
+
+    Returns:
+        A string summarizing the contents of the repository.
+    """
+    logger.debug("summarize_repo_contents(): start")
+    logger.debug("summarize_repo_contents(): calling walk_the_repo")
+
+    file_records = scan_repo(repo_root)
+    logger.debug("summarize_repo_contents(): finished scanning repository, found %d file records", len(file_records))
+    return "Repository contents summarized"
+    
+# ---- the Main scan function ----
+def scan_repo(repo_root: Path) -> list[FileRecord]:
     """Scan the learning repository and return a list of file records.
 
     Args:

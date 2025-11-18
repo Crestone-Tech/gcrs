@@ -52,4 +52,45 @@ which uvicornThis should show a path containing `.venv` or `venv` (e.g., `/path/
 
 - `GET /` - Root endpoint
 - `GET /health` - Health check endpoint
+- `POST /scan/summary` - Generate a summary of repository contents
 - `POST /scan` - Scan a repository and generate a BOM
+
+## Testing
+
+### Testing `/scan/summary` Endpoint
+
+The `/scan/summary` endpoint returns a JSON summary of the repository contents, including counts by category, language, and extension.
+
+#### Using curl
+
+**Test with default parameters (scans current directory):**
+```bash
+curl -X POST "http://127.0.0.1:8000/scan/summary"
+```
+
+**Test with custom repository root:**
+```bash
+curl -X POST "http://127.0.0.1:8000/scan/summary?repo_root=/path/to/repository"
+```
+
+**Test with custom repository root and output directory:**
+```bash
+curl -X POST "http://127.0.0.1:8000/scan/summary?repo_root=/path/to/repository&output_dir=output"
+```
+
+#### Using Swagger UI (Interactive Testing)
+
+1. Navigate to http://127.0.0.1:8000/docs
+2. Find the `POST /scan/summary` endpoint
+3. Click "Try it out"
+4. Enter your parameters:
+   - `repo_root`: Path to the repository (default: ".")
+   - `output_dir`: Output directory (default: "output")
+5. Click "Execute" to see the response
+
+#### Expected Response
+
+The endpoint returns a JSON object containing:
+- Repository summary statistics
+- Counts by category, language, and file extension
+- Total file counts and sizes
