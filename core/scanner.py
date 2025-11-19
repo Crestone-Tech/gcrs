@@ -4,8 +4,8 @@ import os
 from collections.abc import Iterable
 from pathlib import Path
 
-from app.logger import setup_logging
-from app.models import FileRecord, RepositorySummary, SummaryResponse
+from gcrs.logger import setup_logging
+from gcrs.models import FileRecord, RepositorySummary, SummaryResponse
 
 logger = setup_logging(log_level="DEBUG")
 
@@ -233,7 +233,7 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path) -> Sum
     """
     logger.debug("summarize_repo_contents(): start")
 
-    file_records, summary = scan_repo(repo_root_path)
+    _, summary = scan_repo(repo_root_path)
         
     write_summary_to_file(summary=summary, output_file_path=output_file_path)
     return SummaryResponse(
@@ -264,7 +264,6 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
         files_by_extension={}
     )
     for filename in filenames:
-        summary.total_files += 1  # count files as we iterate
         relative_dir = filename.relative_to(repo_root_path).as_posix()
         name = filename.name
         extension = filename.suffix.lower()
@@ -291,15 +290,6 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
             summary.files_by_extension[extension] = summary.files_by_extension.get(extension, 0) + 1
     logger.debug("scan_repo(): end")
     return file_records, summary
-
-
-
-
-
-
-
-
-
 
 
 
@@ -369,3 +359,4 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
 #             is_binary=is_binary,
 #         ))
 #         return records
+
