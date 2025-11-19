@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "debug.console.fontSize": 12,
+    "debug.console.wordWrap": true,
+    "debug.focusWindowOnBreak": false,
+    "debug.showBreakpointsInOverview": true,
+    "debug.inlineValues": true
+}
+
