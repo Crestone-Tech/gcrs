@@ -6,13 +6,13 @@ from pathlib import Path
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-import app.core.scanner as scanner
-from app.logger import setup_logging
-from app.models import ScanResponse, SummaryResponse
+import gcrs.core.scanner as scanner
+from gcrs.logger import setup_logging
+from gcrs.models import ScanResponse, SummaryResponse
 
 # ---- setup logging ----
 logger = setup_logging(log_level="DEBUG")
-logger.debug("app.api.main.py:main() starting the API")
+logger.debug("gcrs.api.main.py:main() starting the API")
 
 # ---- instantiate the FastAPI as the app ----
 app = FastAPI(title="Green Cloud Repository Scanner")
@@ -95,7 +95,7 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
         A SummaryResponse containing the summary of the repository contents. 
         On Error: If the repository root directory does not exist, sets the status to "error" and returns an error response.
     """
-    logger.debug("app.api.main:summarize_repository_contents() starting at directory: %s", params.repo_root)
+    logger.debug("gcrs.api.main:summarize_repository_contents() starting at directory: %s", params.repo_root)
 
     # validate the repository root directory before proceeding
     repo_root_path = validate_path(params.repo_root)
@@ -135,7 +135,7 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
 # ---- scan the repository and output full info about the files in the repository ----
 # @app.get("/scan")
 # async def scan_repository(ScanParams: ScanParams) -> ScanResponse:
-#     logger.debug("app.api.main:scan_repository() starting at directory: %s", ScanParams.repo_root)
+#     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", ScanParams.repo_root)
 #     repo_root_path = Path(ScanParams.repo_root)
 #     # check if repo root directory exists
 #     if not repo_root_path.exists() or not repo_root_path.is_dir():
@@ -166,3 +166,4 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
 #         skipped_count=0,
 #     )
 #     return response
+

@@ -34,3 +34,4 @@ def setup_logging(log_level: str = "INFO", log_file: str | None = "logs/app.log"
     }
     logging.config.dictConfig(logging_config)
     return logging.getLogger("app")
+
