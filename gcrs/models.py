@@ -1,6 +1,6 @@
 """Pydantic models for the Green Cloud Repository Scanner."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FileRecord(BaseModel):
@@ -27,10 +27,35 @@ class ScanResponse(BaseModel):
 
 class SummaryResponse(BaseModel):
     """Response model containing summary results for a repository."""
-    status: str
-    summary: str | None = None # summary of the repository contents. If the summary generation failed, this will be None.
-    repo_root: str # path to the root of the repository
-    error: str | None = None  # error message if the summary generation failed
+    
+    status: str = Field(
+        description="Status of the scan operation: 'success' or 'error'",
+        example="success",
+    )
+    summary: str | None = Field(
+        default=None,
+        description="Summary of the repository contents. If the summary generation failed, this will be None.",
+        example=None,
+    )
+    repo_root: str = Field(
+        description="Absolute path to the root of the scanned repository",
+        example="/path/to/repository",
+    )
+    files_scanned: int | None = Field(
+        default=None,
+        description="Number of files successfully scanned",
+        example=150,
+    )
+    files_skipped: int | None = Field(
+        default=None,
+        description="Number of files skipped during scanning (e.g., binary files, excluded directories)",
+        example=5,
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message if the scan operation failed (status='error')",
+        example=None,
+    )
 
 class RepositorySummary(BaseModel):
     """Information about the repository."""

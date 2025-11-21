@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import gcrs.core.scanner as scanner
 from gcrs.logger import setup_logging
@@ -18,13 +18,38 @@ logger.debug("gcrs.api.main.py:main() starting the API")
 app = FastAPI(title="Green Cloud Repository Scanner")
 
 # ---- root endpoint ----
-@app.get("/")
+@app.get(
+    "/",
+    summary="API root",
+    description="Returns a message identifying the Green Cloud Repository Scanner API",
+    tags=["General"],
+)
 async def root():
+    """API root endpoint.
+    
+    Returns a simple message identifying the API service.
+    
+    **Returns:**
+    - `message`: Service identification message
+    """
     return {"message": "Green Cloud Repository Scanner"}
 
 # ---- health check endpoint ----
-@app.get("/health")
+@app.get(
+    "/healthz",
+    summary="Health check endpoint",
+    description="Health check endpoint to verify the API service is running",
+    tags=["General"],
+)
 async def health():
+    """Health check endpoint.
+    
+    Used to verify that the API service is running and responsive.
+    Useful for monitoring and load balancer health checks.
+    
+    **Returns:**
+    - `status`: "healthy" if the service is operational
+    """
     return {"status": "healthy"}
 
 # ---- helper functions ----
@@ -74,26 +99,82 @@ class ScanParams(BaseModel):
     output_file: str | None = None
 
 class SummaryParams(BaseModel):
-    repo_root: str = "."
-    output_dir: str = "output"
-    output_file: str | None = None
+    """Parameters for repository summary scan request."""
+    
+    repo_root: str = Field(
+        default=".",
+        description="Path to the repository root directory to scan",
+        examples=[".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"],
+    )
+    output_dir: str = Field(
+        default="output",
+        description="Directory relative to repo_rootsky where the summary JSON file will be written",
+        examples=["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"],
+    )
+    output_file: str | None = Field(
+        default=None,
+        description="Optional filename for the summary JSON file. If not provided, a default name will be generated based on repository name and timestamp",
+        example="sample_repo_YYYYmmdd_HHMMSS.summary.txt",
+    )
 
 # ---- scan the repository and output a summary of the contents ----
-@app.post("/scan/summary")
+@app.post(
+    "/scan/summary",
+    response_model=SummaryResponse,
+    summary="Scan repository and generate summary",
+    description="""
+    Scans a repository directory and generates a comprehensive summary of its contents.
+    
+    The summary includes:
+    - Total number of files scanned and skipped
+    - # of files by language (Python, JavaScript, etc.)
+    - # of files by type (code, config, documentation, etc.)
+    - # of files by technology (Docker, Kubernetes, etc.)
+    - # of files by dependency management system
+    - # of files by file extension
+    - # of data files by extension
+    
+    The summary is written to a JSON file in the specified output directory.
+    """,
+    response_description="Summary response containing repository statistics",
+    tags=["Scanning"],
+)
 async def summarize_repository_contents(params: SummaryParams) -> SummaryResponse:
-    """Summarize the contents of the repository:
-
-    - # of files scanned
-    - # of files skipped
-    - # of files per category (code, config, docs, etc.)
-    - # of files per language (python, javascript, etc.)
+    """Summarize the contents of a repository.
     
-    Args:
-        params: SummaryParams containing the repository root directory and output directory.
+    Scans the specified repository directory and generates a detailed summary
+    of file types, languages, technologies, and dependencies found.
     
-    Returns:
-        A SummaryResponse containing the summary of the repository contents. 
-        On Error: If the repository root directory does not exist, sets the status to "error" and returns an error response.
+    **Parameters:**
+    - `repo_root`: Path to the repository root directory (default: ".")
+    - `output_dir`: Directory relative to repo_root where output file will be written (default: "output")
+    - `output_file`: Optional filename for the summary JSON file. If not provided, generates a default name.
+    
+    **Returns:**
+    - `status`: "success" or "error"
+    - `files_scanned`: Number of files successfully scanned
+    - `files_skipped`: Number of files skipped during scanning
+    - `repo_root`: Absolute path to the scanned repository
+    - `error`: Error message if status is "error"
+    
+    **Example Request:**
+    ```json
+    {
+        "repo_root": ".",
+        "output_dir": "output",
+        "output_file": null
+    }
+    ```
+    
+    **Example Response:**
+    ```json
+    {
+        "status": "success",
+        "files_scanned": 150,
+        "files_skipped": 5,
+        "repo_root": "/path/to/repository"
+    }
+    ```
     """
     logger.debug("gcrs.api.main:summarize_repository_contents() starting at directory: %s", params.repo_root)
 
