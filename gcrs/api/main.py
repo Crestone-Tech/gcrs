@@ -122,7 +122,13 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
         )
     # generate default output filename if not provided
     output_file = params.output_file or generate_default_output_file(params.repo_root, "summary.txt")
+    # Ensure output_file is not empty
+    if not output_file or not output_file.strip():
+        output_file = generate_default_output_file(params.repo_root, "summary.txt")
     output_file_path = output_dir_path / output_file
+    # Ensure parent directory exists
+    output_file_path.parent.mkdir(parents=True, exist_ok=True)
+    # Create the file if it doesn't exist
     if not output_file_path.exists():
         output_file_path.touch()
     

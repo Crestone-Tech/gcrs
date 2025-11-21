@@ -12,6 +12,7 @@ class FileRecord(BaseModel):
     category: str | None = None # e.g., "code", "config", "docs", etc.
     language: str | None = None  # e.g., "python"
     technologies: list[str] = []  # e.g., ["docker", "kubernetes"]
+    data_type: str | None = None # e.g., "csv", "jsonl", "xml", "tsv", "parquet", "sqlite", "db", "ndjson"
     dependency_kind: str | None = None  # e.g., "python-requirements", "npm-package"
     size_bytes: int
     is_binary: bool
@@ -39,8 +40,8 @@ class RepositorySummary(BaseModel):
     files_by_technology: dict[str, int]  # number of files by technology
     files_by_dependency: dict[str, int]  # number of files by dependency
     files_by_extension: dict[str, int]  # number of files by file extension
+    data_files_by_extension: dict[str, int]  # number of data files by extension
     total_files: int = 0
     scanned_files: int = 0
     skipped_files: int = 0
-    summary: str = ""
 

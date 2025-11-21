@@ -57,7 +57,16 @@ BINARY_EXTENSIONS = {
 }
 
 # ---- list of data file extensions ----
-DATA_EXTENSIONS = {".csv", ".jsonl", ".xml", ".tsv", ".parquet", ".sqlite", ".db", ".ndjson"}
+DATA_TYPES_BY_EXTENSION = {
+    ".csv": "csv",
+    ".jsonl": "jsonl",
+    ".xml": "xml",
+    ".tsv": "tsv",
+    ".parquet": "parquet",
+    ".sqlite": "sqlite",
+    ".db": "db",
+    ".ndjson": "ndjson",
+}
 
 # ---- map file extensions to their language ----
 LANGUAGE_BY_EXT = {
@@ -90,6 +99,16 @@ LANGUAGE_BY_EXT = {
     ".vb": "vb",
 }
 
+TECHNOLOGY_PATTERNS = {
+    "Dockerfile": "Docker",
+    "k8s": "Kubernetes",
+    ".tf": "Terraform",
+    "ansible": "Ansible",
+    "pom.xml": "Maven",
+    "build.gradle": "Gradle",
+    "package.json": "Node.js",
+}
+
 # ---- map file extensions to their category ----
 CATEGORY_BY_EXT = {
     # code
@@ -116,7 +135,7 @@ CATEGORY_BY_EXT = {
     ".tf": "infrastructure",
     ".dockerfile": "infrastructure",
     # data
-    **dict.fromkeys(DATA_EXTENSIONS, "data"),
+    **dict.fromkeys(DATA_TYPES_BY_EXTENSION, "data"),
     # assets (fallback: binary handled via is_binary_ext)
     ".svg": "asset",
 }
@@ -168,7 +187,7 @@ def is_data_ext(ext: str) -> bool:
     Returns:
         True if the extension is in the list of data extensions, False otherwise.
     """
-    return ext in DATA_EXTENSIONS
+    return ext in DATA_TYPES_BY_EXTENSION
 
 
 # ---- walk the repository and yield all files that are not in the skip directories ----
@@ -217,6 +236,7 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path):
         # The summary object is a Pydantic model, so you can serialize it to JSON and write it to a file.
         # This uses the Pydantic model's model_dump_json() method to dump as JSON.
         json_str = summary.model_dump_json(indent=2)
+        # logger.debug("write_summary_to_file(): summary.model_dump_json(): %s", json_str)
         f.write(json_str)
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
@@ -256,29 +276,38 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
     logger.debug("scan_repo(): start")
     file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root_path)
+    total_files = 0
     summary = RepositorySummary(
         files_by_language={},
         files_by_category={},
+        data_files_by_extension={},
         files_by_technology={},
         files_by_dependency={},
         files_by_extension={}
     )
     for filename in filenames:
+        total_files += 1
         relative_dir = filename.relative_to(repo_root_path).as_posix()
         name = filename.name
         extension = filename.suffix.lower()
         language = LANGUAGE_BY_EXT.get(extension, None)
         category = CATEGORY_BY_EXT.get(extension, None)
-        is_binary = is_binary_ext(extension)
+        data_type = DATA_TYPES_BY_EXTENSION.get(extension, None)
+        technology = TECHNOLOGY_PATTERNS.get(name.lower(), None)
+        dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
         size_bytes = filename.stat().st_size
+        is_binary = is_binary_ext(extension)
         new_file_record = FileRecord(
             relative_dir=relative_dir,
             name=name,
             extension=extension,
             category=category,
             language=language,
-            is_binary=is_binary,
+            data_type=data_type,
+            technology=technology,
+            dependency_kind=dependency_kind,
             size_bytes=size_bytes,
+            is_binary=is_binary
         )
         file_records.append(new_file_record)
         
@@ -286,8 +315,19 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
             summary.files_by_language[language] = summary.files_by_language.get(language, 0) + 1
         if category:
             summary.files_by_category[category] = summary.files_by_category.get(category, 0) + 1
-        if extension:
+        if extension and not is_binary:
             summary.files_by_extension[extension] = summary.files_by_extension.get(extension, 0) + 1
+        if extension and is_binary:
+            summary.binary_files_by_extension[extension] = summary.binary_files_by_extension.get(extension, 0) + 1
+        if dependency_kind:
+            summary.files_by_dependency[dependency_kind] = summary.files_by_dependency.get(dependency_kind, 0) + 1
+        if data_type:
+            summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
+        if technology:
+            summary.files_by_technology[technology] = summary.files_by_technology.get(technology, 0) + 1
+    summary.total_files = total_files
+    summary.scanned_files = len(file_records)
+    summary.skipped_files = total_files - len(file_records)
     logger.debug("scan_repo(): end")
     return file_records, summary
 
