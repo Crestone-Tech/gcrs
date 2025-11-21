@@ -9,6 +9,8 @@
       "args": [
         "gcrs.api.main:app",
         "--reload",
+        "--reload-dir",
+        "gcrs",
         "--host",
         "127.0.0.1",
         "--port",
