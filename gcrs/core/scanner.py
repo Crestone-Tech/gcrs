@@ -23,6 +23,8 @@ SKIP_DIRS = {
     ".pytest_cache",
     ".mypy_cache",
     ".vscode",
+    ".DS_Store",
+    "output",
 }
 
 # ---- list of binary file extensions ----
@@ -99,14 +101,70 @@ LANGUAGE_BY_EXT = {
     ".vb": "vb",
 }
 
+# ---- map dependency files to their kind ----
+DEPENDENCY_KIND_BY_NAME = {
+    "requirements.txt": "python-requirements",
+    "pyproject.toml": "python-pyproject",
+    "Pipfile": "python-pipenv",
+    "Pipfile.lock": "python-pipenv-lock",
+    "poetry.lock": "python-poetry-lock",
+    "package.json": "node-package",
+    "package-lock.json": "node-lock",
+    "pnpm-lock.yaml": "node-pnpm-lock",
+    "yarn.lock": "node-yarn-lock",
+    "go.mod": "go-mod",
+    "go.sum": "go-sum",
+    "pom.xml": "maven-pom",
+    "Gemfile": "ruby-gemfile",
+    "Gemfile.lock": "ruby-gem-lock",
+    "Cargo.toml": "rust-cargo",
+    "Cargo.lock": "rust-cargo-lock",
+}
+
+# Map dependency kinds to technologies (extract technology from dependency_kind value)
+DEPENDENCY_TO_TECHNOLOGY = {
+    "python-requirements": "Python",
+    "python-pyproject": "Python",
+    "python-pipenv": "Python",
+    "python-pipenv-lock": "Python",
+    "python-poetry-lock": "Python",
+    "node-package": "Node.js",
+    "node-lock": "Node.js",
+    "node-pnpm-lock": "Node.js",
+    "node-yarn-lock": "Node.js",
+    "go-mod": "Go",
+    "go-sum": "Go",
+    "maven-pom": "Maven",
+    "ruby-gemfile": "Ruby",
+    "ruby-gem-lock": "Ruby",
+    "rust-cargo": "Rust",
+    "rust-cargo-lock": "Rust",
+}
+
+# Build technology patterns from dependency files
+TECHNOLOGY_FROM_DEPENDENCIES = {
+    filename: DEPENDENCY_TO_TECHNOLOGY[kind]
+    for filename, kind in DEPENDENCY_KIND_BY_NAME.items()
+    if kind in DEPENDENCY_TO_TECHNOLOGY
+}
+
 TECHNOLOGY_PATTERNS = {
+    # Infrastructure and tools
     "Dockerfile": "Docker",
+    "docker-compose.yml": "Docker",
+    "docker-compose.yaml": "Docker",
+    "docker-compose.override.yml": "Docker",
+    "docker-compose.override.yaml": "Docker",
     "k8s": "Kubernetes",
     ".tf": "Terraform",
     "ansible": "Ansible",
-    "pom.xml": "Maven",
+    "ansible.cfg": "Ansible",
     "build.gradle": "Gradle",
-    "package.json": "Node.js",
+    "setup.cfg": "Python",
+    "tox.ini": "Python",
+    "pytest.ini": "Python",
+    # Include technology mappings from dependency files
+    **TECHNOLOGY_FROM_DEPENDENCIES,
 }
 
 # ---- map file extensions to their category ----
@@ -143,26 +201,6 @@ CATEGORY_BY_EXT = {
 # CI/CD filenames (no extension or special names)
 CI_FILENAMES = {"Jenkinsfile", ".gitlab-ci.yml", "azure-pipelines.yml"}
 CI_DIR_HINTS = {".github/workflows", ".circleci"}
-
-# ---- map dependency files to their kind ----
-DEPENDENCY_KIND_BY_NAME = {
-    "requirements.txt": "python-requirements",
-    "pyproject.toml": "python-pyproject",
-    "Pipfile": "python-pipenv",
-    "Pipfile.lock": "python-pipenv-lock",
-    "poetry.lock": "python-poetry-lock",
-    "package.json": "node-package",
-    "package-lock.json": "node-lock",
-    "pnpm-lock.yaml": "node-pnpm-lock",
-    "yarn.lock": "node-yarn-lock",
-    "go.mod": "go-mod",
-    "go.sum": "go-sum",
-    "pom.xml": "maven-pom",
-    "Gemfile": "ruby-gemfile",
-    "Gemfile.lock": "ruby-gem-lock",
-    "Cargo.toml": "rust-cargo",
-    "Cargo.lock": "rust-cargo-lock",
-}
 
 # ---- check if a file extension is in the list of binary extensions ----
 def is_binary_ext(ext: str) -> bool:
@@ -277,6 +315,8 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
     file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root_path)
     total_files = 0
+    files_without_extension = 0
+    files_with_extension = 0
     summary = RepositorySummary(
         files_by_language={},
         files_by_category={},
@@ -315,7 +355,10 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
             summary.files_by_language[language] = summary.files_by_language.get(language, 0) + 1
         if category:
             summary.files_by_category[category] = summary.files_by_category.get(category, 0) + 1
-        if extension and not is_binary:
+        if not extension:
+            files_without_extension += 1
+        else:
+            files_with_extension += 1
             summary.files_by_extension[extension] = summary.files_by_extension.get(extension, 0) + 1
         if extension and is_binary:
             summary.binary_files_by_extension[extension] = summary.binary_files_by_extension.get(extension, 0) + 1
@@ -326,6 +369,8 @@ def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary
         if technology:
             summary.files_by_technology[technology] = summary.files_by_technology.get(technology, 0) + 1
     summary.total_files = total_files
+    summary.files_without_extension = files_without_extension
+    summary.files_with_extension = files_with_extension
     summary.scanned_files = len(file_records)
     summary.skipped_files = total_files - len(file_records)
     logger.debug("scan_repo(): end")

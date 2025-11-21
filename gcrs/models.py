@@ -40,6 +40,8 @@ class RepositorySummary(BaseModel):
     files_by_technology: dict[str, int]  # number of files by technology
     files_by_dependency: dict[str, int]  # number of files by dependency
     files_by_extension: dict[str, int]  # number of files by file extension
+    files_without_extension: int = 0 # number of files without an extension
+    files_with_extension: int = 0 # number of files with an extension
     data_files_by_extension: dict[str, int]  # number of data files by extension
     total_files: int = 0
     scanned_files: int = 0
