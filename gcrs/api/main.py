@@ -4,11 +4,11 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 import gcrs.core.scanner as scanner
 from gcrs.logger import setup_logging
-from gcrs.models import ScanResponse, SummaryResponse
+from gcrs.models import SummaryParams, SummaryResponse
 
 # ---- setup logging ----
 logger = setup_logging(log_level="DEBUG")
@@ -97,25 +97,6 @@ class ScanParams(BaseModel):
     output_dir: str = "output"
     output_format: str = "SARIF"
     output_file: str | None = None
-
-class SummaryParams(BaseModel):
-    """Parameters for repository summary scan request."""
-    
-    repo_root: str = Field(
-        default=".",
-        description="Path to the repository root directory to scan",
-        examples=[".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"],
-    )
-    output_dir: str = Field(
-        default="output",
-        description="Directory relative to repo_rootsky where the summary JSON file will be written",
-        examples=["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"],
-    )
-    output_file: str | None = Field(
-        default=None,
-        description="Optional filename for the summary JSON file. If not provided, a default name will be generated based on repository name and timestamp",
-        example="sample_repo_YYYYmmdd_HHMMSS.summary.txt",
-    )
 
 # ---- scan the repository and output a summary of the contents ----
 @app.post(

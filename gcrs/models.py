@@ -25,6 +25,26 @@ class ScanResponse(BaseModel):
     scanned_count: int
     skipped_count: int
 
+class SummaryParams(BaseModel):
+    """Parameters for repository summary scan request."""
+    
+    repo_root: str = Field(
+        default=".",
+        description="Path to the repository root directory to scan",
+        examples=[".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"],
+    )
+    output_dir: str = Field(
+        default="output",
+        description="Directory relative to repo_root where the summary JSON file will be written",
+        examples=["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"],
+    )
+    output_file: str | None = Field(
+        default=None,
+        description="Optional filename for the summary JSON file. If not provided, a default name will be generated based on repository name and timestamp",
+        example="sample_repo_YYYYmmdd_HHMMSS.summary.txt",
+    )
+
+
 class SummaryResponse(BaseModel):
     """Response model containing summary results for a repository."""
     
