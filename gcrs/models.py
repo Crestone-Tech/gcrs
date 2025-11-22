@@ -91,6 +91,11 @@ class SummaryParams(BaseModel):
         description="Optional filename for the summary JSON file. If not provided, a default name will be generated based on repository name and timestamp",
         example="sample_repo_YYYYmmdd_HHMMSS.summary.txt",
     )
+    output_file_format: Literal["json", "markdown"] = Field(
+        default="markdown",
+        description="Format of the output file. Defaults to markdown if blank/not provided. Other option is json. Markdown is a human-readable markdown table.",
+        examples=["json", "markdown"],
+    )
 
 
 class SummaryResponse(BaseModel):

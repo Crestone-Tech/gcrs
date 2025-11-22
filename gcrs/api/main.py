@@ -3,8 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, status
 
 import gcrs.core.scanner as scanner
 from gcrs.logger import setup_logging
@@ -15,7 +14,11 @@ logger = setup_logging(log_level="DEBUG")
 logger.debug("gcrs.api.main.py:main() starting the API")
 
 # ---- instantiate the FastAPI as the app ----
-app = FastAPI(title="Green Cloud Repository Scanner")
+app = FastAPI(
+    title="Green Cloud Repository Scanner",
+    description="API for scanning repositories and generating summaries of their contents",
+    version="1.0.0",
+)
 
 # ---- root endpoint ----
 @app.get(
@@ -53,26 +56,35 @@ async def health():
     return {"status": "healthy"}
 
 # ---- helper functions ----
-def validate_path(path: str) -> Path | None:
-    """Validate that the path exists and is a directory.
+def validate_and_resolve_path(path: str, must_exist: bool = False, create_if_missing: bool = False) -> Path | None:
+    """Validate and resolve a path, optionally creating it if missing.
     
     Args:
-        path: Path to the directory.
+        path: Path to validate.
+        must_exist: If True, path must exist or None is returned.
+        create_if_missing: If True, create the directory if it doesn't exist.
     
     Returns:
-        Path object if valid, None if invalid.
+        Resolved Path object if valid, None if invalid.
     """
-    path_obj = Path(path)
-    if not path_obj.exists():
-        logger.error("The specified path does not exist and will be created: %s", path_obj)
-        path_obj.mkdir(parents=True, exist_ok=True)
-    elif not path_obj.is_dir():
-        logger.error("The specified path is not a directory: %s", path_obj)
+    try:
+        path_obj = Path(path).resolve()
+        if not path_obj.exists():
+            if must_exist:
+                logger.error("The specified path does not exist: %s", path_obj)
+                return None
+            if create_if_missing:
+                logger.info("Creating directory: %s", path_obj)
+                path_obj.mkdir(parents=True, exist_ok=True)
+        elif not path_obj.is_dir():
+            logger.error("The specified path is not a directory: %s", path_obj)
+            return None
+        return path_obj
+    except (OSError, ValueError) as e:
+        logger.error("Error validating path %s: %s", path, e)
         return None
-        
-    return path_obj
 
-def generate_default_output_file(repo_root: str, file_extension: str = "sarif") -> str:
+def generate_default_output_file(repo_root: str, file_extension: str = "summary.txt") -> str:
     """Generate a default output filename with repo name and timestamp.
     
     Args:
@@ -90,18 +102,11 @@ def generate_default_output_file(repo_root: str, file_extension: str = "sarif") 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{repo_name}_{timestamp}.{file_extension}"
 
-# ---- scan parameters ----
-# ScanParams is a Pydantic model to define and validate the parameters for a scan request (for example, when accepting POST/JSON body parameters about which repo directory to scan).
-class ScanParams(BaseModel):
-    repo_root: str = "."
-    output_dir: str = "output"
-    output_format: str = "SARIF"
-    output_file: str | None = None
-
 # ---- scan the repository and output a summary of the contents ----
 @app.post(
     "/scan/summary",
     response_model=SummaryResponse,
+    status_code=status.HTTP_200_OK,
     summary="Scan repository and generate summary",
     description="""
     Scans a repository directory and generates a comprehensive summary of its contents.
@@ -159,45 +164,72 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
     """
     logger.debug("gcrs.api.main:summarize_repository_contents() starting at directory: %s", params.repo_root)
 
-    # validate the repository root directory before proceeding
-    repo_root_path = validate_path(params.repo_root)
-    if repo_root_path is None:
-        return SummaryResponse(
-            status="error",
-            error="The specified repository root directory does not exist or is not a directory",
-            repo_root=params.repo_root,
-            summary=None,
-            files_scanned=None,
-            files_skipped=None,
-        )
+    try:
+        # validate the repository root directory before proceeding
+        repo_root_path = validate_and_resolve_path(params.repo_root, must_exist=True)
+        if repo_root_path is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "status": "error",
+                    "error": "The specified repository root directory does not exist or is not a directory",
+                    "repo_root": params.repo_root,
+                },
+            )
 
-    # create output directory if it doesn't exist (output_dir is relative to repo_root)
-    output_dir_path = validate_path(str(repo_root_path / params.output_dir))
-    if output_dir_path is None:
-        return SummaryResponse(
-            status="error",
-            error="The specified output directory is not a directory",
-            repo_root=params.repo_root,
-            summary=None,
-            files_scanned=None,
-            files_skipped=None,
+        # create output directory if it doesn't exist (output_dir is relative to repo_root)
+        output_dir_path = validate_and_resolve_path(
+            str(repo_root_path / params.output_dir),
+            create_if_missing=True,
         )
-    # generate default output filename if not provided
-    output_file = params.output_file or generate_default_output_file(params.repo_root, "summary.txt")
-    # Ensure output_file is not empty
-    if not output_file or not output_file.strip():
-        output_file = generate_default_output_file(params.repo_root, "summary.txt")
-    output_file_path = output_dir_path / output_file
-    # Ensure parent directory exists
-    output_file_path.parent.mkdir(parents=True, exist_ok=True)
-    # Create the file if it doesn't exist
-    if not output_file_path.exists():
-        output_file_path.touch()
-    
-    # summarize the repository content
-    summary_response = scanner.summarize_repo_contents(repo_root_path=repo_root_path, output_file_path=output_file_path)
-    logger.debug("method: generate_repo_summary() finished summarizing repository content, status: %s", summary_response.status)
-    return summary_response
+        if output_dir_path is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "status": "error",
+                    "error": f"The specified output directory path [{params.output_dir}] is invalid or could not be created",
+                    "repo_root": str(repo_root_path),
+                },
+            )
+
+        # generate default output filename if not provided
+        output_file = params.output_file or generate_default_output_file(str(repo_root_path))
+        # Ensure output_file is not empty
+        if not output_file or not output_file.strip():
+            output_file = generate_default_output_file(str(repo_root_path))
+        
+        output_file_path = output_dir_path / output_file
+        # Ensure parent directory exists
+        output_file_path.parent.mkdir(parents=True, exist_ok=True)
+        # Create the file if it doesn't exist
+        if not output_file_path.exists():
+            output_file_path.touch()
+        
+        # summarize the repository content
+        summary_response = scanner.summarize_repo_contents(
+            repo_root_path=repo_root_path,
+            output_file_path=output_file_path,
+            output_file_format=params.output_file_format,
+        )
+        logger.debug(
+            "method: summarize_repo_contents() finished summarizing repository content, status: %s",
+            summary_response.status,
+        )
+        return summary_response
+
+    except HTTPException:
+        # Re-raise HTTP exceptions (validation errors)
+        raise
+    except Exception as e:
+        logger.exception("Unexpected error in summarize_repository_contents: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "status": "error",
+                "error": f"An unexpected error occurred: {str(e)}",
+                "repo_root": params.repo_root,
+            },
+        )
 
 
 # ---- scan the repository and output full info about the files in the repository ----
