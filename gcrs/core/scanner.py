@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from collections.abc import Iterable
 from pathlib import Path
+from typing import Literal
 
 from gcrs.logger import setup_logging
 from gcrs.models import FileRecord, RepositorySummary, SummaryResponse
@@ -261,8 +262,16 @@ def walk_the_repo(repo_root: Path) -> Iterable[str]:
 #     summary_lines = [f"{file_record.relative_dir}/{file_record.name}" for file_record in file_records]
 #     return "\n".join(summary_lines)
 
+# ---- format the summary as markdown ----
+def format_summary_as_markdown(summary: RepositorySummary) -> str:
+    """Format the summary as markdown.
+
+    Args:
+        summary: RepositorySummary object.
+    """
+    return "zipfrog as markdown"
 # ---- write the summary to a file ----
-def write_summary_to_file(summary: RepositorySummary, output_file_path: Path):
+def write_summary_to_file(summary: RepositorySummary, output_file_path: Path, output_file_format: Literal["json", "markdown"] = "markdown"):
     """Write the summary to a file.
 
     Args:
@@ -274,12 +283,16 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path):
         # The summary object is a Pydantic model, so you can serialize it to JSON and write it to a file.
         # This uses the Pydantic model's model_dump_json() method to dump as JSON.
         json_str = summary.model_dump_json(indent=2)
-        # logger.debug("write_summary_to_file(): summary.model_dump_json(): %s", json_str)
-        f.write(json_str)
+        if output_file_format == "json":
+            f.write(json_str)
+        elif output_file_format == "markdown":
+            f.write(format_summary_as_markdown(summary))
+        else:
+            raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
 # ---- scan the repo and output a summary of the contents ----
-def summarize_repo_contents(repo_root_path: Path, output_file_path: Path) -> SummaryResponse:
+def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Args:
@@ -293,7 +306,7 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path) -> Sum
 
     _, summary = scan_repo(repo_root_path)
         
-    write_summary_to_file(summary=summary, output_file_path=output_file_path)
+    write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
     return SummaryResponse(
         status="success",
         files_scanned=summary.scanned_files,

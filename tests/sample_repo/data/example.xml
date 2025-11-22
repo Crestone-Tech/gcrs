@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <person>
+        <name>Alice</name>
+        <age>30</age>
+        <city>New York</city>
+    </person>
+    <person>
+        <name>Bob</name>
+        <age>25</age>
+        <city>San Francisco</city>
+    </person>
+</root>
+

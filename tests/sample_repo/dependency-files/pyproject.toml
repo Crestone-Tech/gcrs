@@ -1,0 +1,8 @@
+[project]
+name = "example-project"
+version = "0.1.0"
+dependencies = [
+    "flask>=2.0",
+    "requests>=2.0",
+]
+
