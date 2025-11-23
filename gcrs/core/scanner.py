@@ -1,3 +1,10 @@
+"""Repository scanning and analysis module.
+
+This module provides functionality to scan repositories, detect file types,
+languages, technologies, and categories, and generate summaries of repository
+contents. It includes utilities for walking repository directories, identifying
+file characteristics, and generating structured summaries.
+"""
 from __future__ import annotations
 
 import os
@@ -267,7 +274,10 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
     """Format the summary as markdown.
 
     Args:
-        summary: RepositorySummary object.
+        summary: RepositorySummary object containing repository statistics.
+
+    Returns:
+        A markdown-formatted string representation of the repository summary.
     """
     return "zipfrog as markdown"
 # ---- write the summary to a file ----
@@ -275,8 +285,13 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path, ou
     """Write the summary to a file.
 
     Args:
-        summary: String summary of the repository contents.
-        summary_file_path: Path to the output file.
+        summary: RepositorySummary object containing repository statistics.
+        output_file_path: Path to the output file where the summary will be written.
+        output_file_format: Format of the output file, either "json" or "markdown".
+            Defaults to "markdown".
+
+    Raises:
+        ValueError: If output_file_format is not "json" or "markdown".
     """
     logger.debug("write_summary_to_file(): writing summary to file: %s", output_file_path)
     with open(output_file_path, "w", encoding="utf-8") as f:
@@ -295,12 +310,18 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path, ou
 def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
     """Summarize the contents of the repository.
 
+    Scans the repository, generates a summary of its contents, and writes the
+    summary to the specified output file.
+
     Args:
-        repo_root_path: Path to the root of the repository.
-        output_file_path: Path to the output file.
+        repo_root_path: Path to the root of the repository to scan.
+        output_file_path: Path to the output file where the summary will be written.
+        output_file_format: Format of the output file, either "json" or "markdown".
+            Defaults to "markdown".
 
     Returns:
-        A string summarizing the contents of the repository.
+        A SummaryResponse object containing the repository summary, scan status,
+        file counts, and repository root path.
     """
     logger.debug("summarize_repo_contents(): start")
 
