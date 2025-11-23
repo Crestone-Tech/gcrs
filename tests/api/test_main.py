@@ -3,7 +3,8 @@
 This module contains tests for the core API endpoints including:
 - Root endpoint (API identification)
 - Health check endpoint
-- Scan summary endpoint (only the most basic test to verify the endppoint is alive. Functional tests are in separate modules.)
+- Scan summary endpoint (only the most basic test to verify the endppoint is alive. 
+  Functional tests are in separate modules.)
 """
 from pathlib import Path
 from fastapi.testclient import TestClient

@@ -281,7 +281,8 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
     """
     return "zipfrog as markdown"
 # ---- write the summary to a file ----
-def write_summary_to_file(summary: RepositorySummary, output_file_path: Path, output_file_format: Literal["json", "markdown"] = "markdown"):
+def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
+    output_file_format: Literal["json", "markdown"] = "markdown"):
     """Write the summary to a file.
 
     Args:
@@ -307,7 +308,8 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path, ou
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
 # ---- scan the repo and output a summary of the contents ----
-def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
+def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
+    output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Scans the repository, generates a summary of its contents, and writes the
@@ -326,7 +328,6 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output
     logger.debug("summarize_repo_contents(): start")
 
     _, summary = scan_repo(repo_root_path)
-        
     write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
     return SummaryResponse(
         repository_summary=summary,
@@ -335,7 +336,7 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output
         files_skipped=summary.skipped_files,
         repo_root=str(repo_root_path.resolve())
     )
-    
+
 # ---- scan repo and return a list of file records and a summary of the repository contents ----
 def scan_repo(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
