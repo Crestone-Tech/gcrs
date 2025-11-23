@@ -5,11 +5,18 @@
     "debug.console.wordWrap": true,
     "debug.focusWindowOnBreak": false,
     "debug.showBreakpointsInOverview": true,
-    "debug.inlineValues": true,
+    "debug.inlineValues": "on",
     "python.testing.pytestArgs": [
         "tests"
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "[python]": {
+        "editor.rulers": [120]
+    },
+    "ruff.lineLength": 120,
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.ruffEnabled": true
 }
 
