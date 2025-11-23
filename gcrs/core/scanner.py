@@ -308,6 +308,7 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path, output
         
     write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
     return SummaryResponse(
+        repository_summary=summary,
         status="success",
         files_scanned=summary.scanned_files,
         files_skipped=summary.skipped_files,
