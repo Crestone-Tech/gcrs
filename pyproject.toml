@@ -22,7 +22,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q --log-cli-level=INFO"
 
 [tool.ruff]
 # Set the maximum line length to 100 characters
