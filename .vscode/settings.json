@@ -5,6 +5,11 @@
     "debug.console.wordWrap": true,
     "debug.focusWindowOnBreak": false,
     "debug.showBreakpointsInOverview": true,
-    "debug.inlineValues": true
+    "debug.inlineValues": true,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
 
