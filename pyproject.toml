@@ -25,8 +25,8 @@ dev = [
 addopts = "-q --log-cli-level=INFO"
 
 [tool.ruff]
-# Set the maximum line length to 100 characters
-line-length = 100
+# Set the maximum line length to 120 characters
+line-length = 120
 
 # Enable specific rule sets
 select = [
