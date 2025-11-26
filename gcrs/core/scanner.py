@@ -279,7 +279,34 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
     Returns:
         A markdown-formatted string representation of the repository summary.
     """
-    return "zipfrog as markdown"
+
+    markdown_lines = []
+    markdown_lines.append(f"# Repository Summary")
+    markdown_lines.append(f"## Total Files: {summary.total_files}")
+    markdown_lines.append(f"## Scanned Files: {summary.scanned_files}")
+    markdown_lines.append(f"## Skipped Files: {summary.skipped_files}")
+    markdown_lines.append(f"## Files without Extension: {summary.files_without_extension}")
+    markdown_lines.append(f"## Files with Extension: {summary.files_with_extension}")
+    markdown_lines.append(f"## Files by Language:")
+    for language, count in summary.files_by_language.items():
+        markdown_lines.append(f"  - {language}: {count}")
+    markdown_lines.append(f"## Files by Category:")
+    for category, count in summary.files_by_category.items():
+        markdown_lines.append(f"  - {category}: {count}")
+    markdown_lines.append(f"## Files by Technology:")
+    for technology, count in summary.files_by_technology.items():
+        markdown_lines.append(f"  - {technology}: {count}")
+    markdown_lines.append(f"## Files by Dependency:")
+    for dependency, count in summary.files_by_dependency.items():
+        markdown_lines.append(f"  - {dependency}: {count}")
+    markdown_lines.append(f"## Files by Extension:")
+    for extension, count in summary.files_by_extension.items():
+        markdown_lines.append(f"  - {extension}: {count}")
+    markdown_lines.append(f"## Binary Files by Extension:")
+    for extension, count in summary.binary_files_by_extension.items():
+        markdown_lines.append(f"  - {extension}: {count}")
+
+    return "\n".join(markdown_lines)
 # ---- write the summary to a file ----
 def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
     output_file_format: Literal["json", "markdown"] = "markdown"):
