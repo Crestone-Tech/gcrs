@@ -77,13 +77,32 @@ def test_summary_markdown_output_format(client: TestClient, sample_repo_path: Pa
     # Verify the file contains markdown content
     with open(output_path, "r", encoding="utf-8") as f:
         file_content = f.read()
+        lines = file_content.splitlines()
     
     # Verify it's not empty
     assert len(file_content) > 0, "Markdown file should not be empty"
     
-    # Verify the markdown contains some expected elements
-    # (Note: The actual markdown format may vary, but it should contain some text)
-    assert isinstance(file_content, str), "Markdown file should contain text"
+    # Verify the markdown structure matches expected format
+    assert lines[0].strip() == "# Repository Summary", f"First line should be '# Repository Summary', got: {lines[0]}"
+    assert lines[1].strip().startswith("## Total Files:"), f"Second line should start with '## Total Files:', got: {lines[1]}"
+    assert lines[2].strip().startswith("## Scanned Files:"), f"Third line should start with '## Scanned Files:', got: {lines[2]}"
+    assert lines[3].strip().startswith("## Skipped Files:"), f"Fourth line should start with '## Skipped Files:', got: {lines[3]}"
+    assert lines[4].strip().startswith("## Files without Extension:"), f"Fifth line should start with '## Files without Extension:', got: {lines[4]}"
+    assert lines[5].strip().startswith("## Files with Extension:"), f"Sixth line should start with '## Files with Extension:', got: {lines[5]}"
+    assert lines[6].strip() == "## Files by Language:", f"Seventh line should be '## Files by Language:', got: {lines[6]}"
+    
+    # Verify the language list items start with proper indentation and bullet
+    assert lines[7].strip().startswith("- "), f"Eighth line should start with '- ', got: {lines[7]}"
+    assert lines[8].strip().startswith("- "), f"Ninth line should start with '- ', got: {lines[8]}"
+    
+    # Verify the values in the markdown match the API response
+    summary = data["repository_summary"]
+    assert f"## Total Files: {summary['total_files']}" in file_content
+    assert f"## Scanned Files: {summary['scanned_files']}" in file_content
+    assert f"## Skipped Files: {summary['skipped_files']}" in file_content
+    assert f"## Files without Extension: {summary['files_without_extension']}" in file_content
+    assert f"## Files with Extension: {summary['files_with_extension']}" in file_content
+
 
 
 def test_summary_default_output_format(client: TestClient, sample_repo_path: Path):
