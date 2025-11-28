@@ -11,6 +11,10 @@ class FileRecord(BaseModel):
         description="Directory path relative to repository root (e.g., 'src/utils')",
         json_schema_extra={"example": "src/utils"},
     )
+    absolute_filename: str = Field(
+        description="Absolute filename (e.g., '/path/to/repository/src/utils/scanner.py')",
+        json_schema_extra={"example": "C:\\absolute\\path\\to\\sample_repo\\src\\utils\\scanner.py"},
+    )
     name: str = Field(
         description="Filename (e.g., 'scanner.py')",
         json_schema_extra={"example": "scanner.py"},
@@ -94,6 +98,30 @@ class SummaryParams(BaseModel):
         default="markdown",
         description="Format of the output file. Defaults to markdown if blank/not provided. Other option is json. Markdown is a human-readable markdown table.",
         json_schema_extra={"examples": ["json", "markdown"]},
+    )
+
+class ScanParams(BaseModel):
+    """Parameters for repository scan request."""
+    
+    repo_root: str = Field(
+        default=".",
+        description="Path to the repository root directory to scan",
+        json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
+    )
+    output_dir: str = Field(
+        default="output",
+        description="Directory relative to repo_root where the output file will be written",
+        json_schema_extra={"examples": ["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"]},
+    )
+    output_file: str | None = Field(
+        default=None,
+        description="Optional filename for the output file. If not provided, a default name will be generated based on repository name and timestamp",
+        json_schema_extra={"example": "sample_repo_YYYYmmdd_HHMMSS.scan.json"},
+    )
+    output_file_format: Literal["json", "markdown", "csv"] = Field(
+        default="json",
+        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown is a human-readable markdown table. CSV is a comma-separated values file.",
+        json_schema_extra={"examples": ["json", "markdown", "csv"]},
     )
 
 class RepositorySummary(BaseModel):
@@ -196,3 +224,32 @@ class SummaryResponse(BaseModel):
         json_schema_extra={"example": None},
     )
 
+class ScanResponse(BaseModel):
+    """Response model containing scan results for a repository."""
+
+    status: Literal["success", "error"] = Field(
+        description="Status of the scan operation: 'success' or 'error'",
+        json_schema_extra={"example": "success"},
+    )
+    repo_root: str = Field(
+        description="Absolute path to the root of the scanned repository",
+        json_schema_extra={"example": "/path/to/repository"},
+    )
+    files_scanned: int = Field(
+        description="Number of files successfully scanned",
+        json_schema_extra={"example": 150},
+    )
+    files_skipped: int = Field(
+        description="Number of files skipped during scanning",
+        json_schema_extra={"example": 5},
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message if the scan operation failed (status='error')",
+        json_schema_extra={"example": None},
+    )
+    output_file: str | None = Field(
+        default=None,
+        description="Path to the output file",
+        json_schema_extra={"example": "/path/to/repository/output/sample_repo_YYYYmmdd_HHMMSS.scan.json"},
+    )
