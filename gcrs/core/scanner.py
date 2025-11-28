@@ -334,6 +334,27 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
+# escape markdown table cells
+def escape_markdown_table_cells(cell: str) -> str:
+    """Escape markdown table cells.
+
+    Args:
+        cell: Cell to escape.
+
+    Returns:
+        An escaped markdown table cell.
+    """
+    cell = cell.replace("|", "\\|")
+    cell = cell.replace("*", "\\*")
+    cell = cell.replace("_", "\\_")
+    cell = cell.replace("~", "\\~")
+    cell = cell.replace("`", "\\`")
+    cell = cell.replace("^", "\\^")
+    cell = cell.replace("$", "\\$")
+    cell = cell.replace("#", "\\#")
+    cell = cell.replace("&", "\\&")
+    return cell
+
 # ---- format the file records as markdown ----
 def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
     """Format the file records as markdown.
@@ -355,9 +376,9 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
     # Write each file record as a row in the markdown table
     for file_record in file_records:
         markdown_lines.append(
-            f"| {file_record.name} "
+            f"| {escape_markdown_table_cells(file_record.name)} "
             f"| {file_record.extension or ''} "
-            f"| {file_record.relative_dir} "
+            f"| {escape_markdown_table_cells(file_record.relative_dir)} "
             f"| {file_record.language or ''} "
             f"| {file_record.category or ''} "
             f"| {file_record.data_type or ''} "
