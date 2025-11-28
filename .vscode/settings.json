@@ -1,22 +1,39 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
-    "python.terminal.activateEnvironment": true,
-    "debug.console.fontSize": 12,
-    "debug.console.wordWrap": true,
-    "debug.focusWindowOnBreak": false,
-    "debug.showBreakpointsInOverview": true,
-    "debug.inlineValues": "on",
-    "python.testing.pytestArgs": [
-        "tests"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true,
-    "[python]": {
-        "editor.rulers": [120]
-    },
-    "ruff.lineLength": 120,
-    "python.linting.enabled": true,
-    "python.linting.pylintEnabled": false,
-    "python.linting.ruffEnabled": true
+  // Enable Outline view in Explorer sidebar
+  "outline.showFiles": true,
+  "outline.showFunctions": true,
+  "outline.showClasses": true,
+  "outline.showInterfaces": true,
+  "outline.showStructs": true,
+  "outline.showEnums": true,
+  "outline.showModules": true,
+  "outline.showVariables": true,
+  "outline.showConstants": true,
+  "outline.showProperties": true,
+  "outline.showEvents": true,
+  "outline.showOperators": true,
+  
+  // Enable breadcrumbs for navigation
+  "breadcrumbs.enabled": true,
+  "breadcrumbs.filePath": "on",
+  "breadcrumbs.symbolPath": "on",
+  
+  // Symbol navigation settings
+  "editor.gotoLocation.multipleDefinitions": "goto",
+  "editor.gotoLocation.multipleReferences": "goto",
+  "editor.gotoLocation.multipleImplementations": "goto",
+  
+  // Python-specific settings for better symbol support
+  "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.autoImportCompletions": true,
+  
+  // File explorer settings
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  
+  // Enable minimap for code overview
+  "editor.minimap.enabled": true,
+  
+  // Show line numbers
+  "editor.lineNumbers": "on"
 }
-
