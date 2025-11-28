@@ -334,6 +334,39 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
+# ---- format the file records as markdown ----
+def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
+    """Format the file records as markdown.
+
+    Args:
+        file_records: List of FileRecord objects to format.
+
+    Returns:
+        A markdown-formatted string representation of the file records.
+    """
+    markdown_lines = []
+    markdown_lines.append(f"# File Records")
+    markdown_lines.append(f"## Total Files: {len(file_records)}")
+    markdown_lines.append(f"## Files:")
+    # Write a table header for the file records
+    markdown_lines.append("")
+    markdown_lines.append("| Name | Extension | Relative Dir | Language | Category | Data Type | Dependency Kind | Size (bytes) | Binary |")
+    markdown_lines.append("|------|-----------|--------------|----------|----------|--------------|-----------------|--------------|--------|")
+    # Write each file record as a row in the markdown table
+    for file_record in file_records:
+        markdown_lines.append(
+            f"| {file_record.name} "
+            f"| {file_record.extension or ''} "
+            f"| {file_record.relative_dir} "
+            f"| {file_record.language or ''} "
+            f"| {file_record.category or ''} "
+            f"| {file_record.data_type or ''} "
+            f"| {file_record.dependency_kind or ''} "
+            f"| {file_record.size_bytes} "
+            f"| {file_record.is_binary} |"
+        )
+    return "\n".join(markdown_lines)
+
 # ---- write the file records to a file ----
 def write_file_records_to_file(file_records: list[FileRecord], output_file_path: Path,
     output_file_format: Literal["json", "markdown"] = "markdown") -> None:
@@ -355,8 +388,8 @@ def write_file_records_to_file(file_records: list[FileRecord], output_file_path:
             # This is the recommended pattern for serializing lists of Pydantic models
             file_records_dict = [record.model_dump() for record in file_records]
             json.dump(file_records_dict, f, indent=2)
-        # elif output_file_format == "markdown":
-        #     f.write(format_file_records_as_markdown(file_records))
+        elif output_file_format == "markdown":
+            f.write(format_file_records_as_markdown(file_records))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file_path.name)
