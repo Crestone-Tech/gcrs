@@ -312,7 +312,8 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     output_file_path = Path(params.output_dir) / params.output_file
     # scan the repository
     scan_response = scanner.scan_repository(repo_root_path=repo_root_path, output_file_path=output_file_path, output_file_format=params.output_file_format)
-    
+    if scan_response.status == "error":
+        return scan_response
     # create response
     response = ScanResponse(
         status="success",
