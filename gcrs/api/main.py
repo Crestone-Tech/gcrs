@@ -1,13 +1,12 @@
 from __future__ import annotations
-
 from datetime import datetime
 from pathlib import Path
-
+import json
 from fastapi import FastAPI, HTTPException, status
 
 import gcrs.core.scanner as scanner
 from gcrs.logger import setup_logging
-from gcrs.models import SummaryParams, SummaryResponse
+from gcrs.models import SummaryParams, SummaryResponse, ScanParams, ScanResponse
 
 # ---- setup logging ----
 logger = setup_logging(log_level="DEBUG")
@@ -231,39 +230,97 @@ async def summarize_repository_contents(params: SummaryParams) -> SummaryRespons
             },
         )
 
-
 # ---- scan the repository and output full info about the files in the repository ----
-# @app.get("/scan")
-# async def scan_repository(ScanParams: ScanParams) -> ScanResponse:
-#     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", ScanParams.repo_root)
-#     repo_root_path = Path(ScanParams.repo_root)
-#     # check if repo root directory exists
-#     if not repo_root_path.exists() or not repo_root_path.is_dir():
-#         logger.error("Directory does not exist: %s", ScanParams.repo_root)
-#         return ScanResponse(
-#             status="error",
-#             repo_root=ScanParams.repo_root,
-#             scanned_count=0,
-#             skipped_count=0,
-#             error="Directory does not exist",
-#         )
-#     # scan the repository
-#     file_records = scan_repo(repo_root_path)
-#     logger.debug(
-#         "method: scan_learning_repository() finished scanning repository, found %d file records",
-#         len(file_records),
-#     )
-#     # create output directory if it doesn't exist
-#     output_dir_path = repo_root_path / output_dir
-#     output_dir_path.mkdir(parents=True, exist_ok=True)
-#     # save file records to output directory
+@app.post("/scan")
+async def scan_repository(params: ScanParams) -> ScanResponse:
+    """Scan the repository and output full info about the files in the repository.
+
+    The output includes:
+    - Total number of files scanned and skipped
+    - for each file:
+        - relative path
+        - name
+        - extension
+        - category
+        - language
+        - technology
+        - dependency management system
+        - size in bytes
+        - is binary
+        - is data file
+        - is code file
+        - is config file
+        - is documentation file
+        - is test file
+        - is example file
+        - is sample file
+
+    The output is written to a file in the specified output directory.
+
+    Output file formats:
+
+    - json
+    - markdown
+    - csv
+
+    **Parameters:**
+    - `repo_root`: Path to the repository root directory
+    - `output_dir`: Directory relative to repo_root where output file will be written
+    - `output_file`: Optional filename for the output file. If not provided, generates a default name.
+    - `output_file_format`: Format of the output file, either "json" or "markdown" or "csv". Defaults to "json".
+
+    **Returns:**
+    - `status`: "success" or "error"
+    - `repo_root`: Absolute path to the scanned repository
+    - `scanned_count`: Number of files successfully scanned
+    - `skipped_count`: Number of files skipped during scanning
+    - `error`: Error message if status is "error"
+
+    **Example Request:**
+    ```json
+    {
+        "repo_root": ".",
+        "output_dir": "output",
+        "output_file": null,
+        "output_file_format": "json"
+    }
+    ```
     
-#     # create response
-#     response = ScanResponse(
-#         status="success",
-#         repo_root=str(repo_root_path.resolve()),
-#         scanned_count=len(file_records),
-#         skipped_count=0,
-#     )
-#     return response
+    **Example Response:**
+    ```json
+    {
+        "status": "success",
+        "repo_root": "/path/to/repository",
+        "scanned_count": 150,
+
+    }
+    ```
+"""
+
+    logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", params.repo_root)
+    repo_root_path = Path(params.repo_root)
+    # check if repo root directory exists
+    if not repo_root_path.exists() or not repo_root_path.is_dir():
+        logger.error("Directory does not exist: %s", params.repo_root)
+        return ScanResponse(
+            status="error",
+            repo_root=params.repo_root,
+            scanned_count=0,
+            skipped_count=0,
+            error="Directory does not exist",
+        )
+    output_file_path = Path(params.output_dir) / params.output_file
+    # scan the repository
+    scan_response = scanner.scan_repository(repo_root_path=repo_root_path, output_file_path=output_file_path, output_file_format=params.output_file_format)
+    
+    # create response
+    response = ScanResponse(
+        status="success",
+        repo_root=str(repo_root_path.resolve()),
+        files_scanned=scan_response.files_scanned,
+        files_skipped=scan_response.files_skipped,
+        error=None,
+        output_file=str(output_file_path.resolve().as_posix()),
+    )
+    return response
 
