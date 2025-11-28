@@ -490,7 +490,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
             category=category,
             language=language,
             data_type=data_type,
-            technology=technology,
+            technologies=technology,
             dependency_kind=dependency_kind,
             size_bytes=size_bytes,
             is_binary=is_binary
@@ -529,8 +529,18 @@ def scan_repository(repo_root_path: Path, output_file_path: Path,
     Scans the repository, writes file information to the output file.
     """
     logger.debug("scan_repository(): start")
-
-    file_records, summary = do_the_repo_scan(repo_root_path)
+    try:
+        file_records, summary = do_the_repo_scan(repo_root_path)
+    except Exception as e:
+        logger.error("scan_repository(): error scanning repository: %s", e)
+        return ScanResponse(
+            status="error",
+            repo_root=str(repo_root_path.resolve()),
+            files_scanned=0,
+            files_skipped=0,
+            error=str(e),
+            output_file=None,
+        )
     write_file_records_to_file(file_records=file_records, output_file_path=output_file_path, output_file_format=output_file_format)
     return ScanResponse(
         status="success",
