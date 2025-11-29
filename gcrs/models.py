@@ -58,24 +58,7 @@ class FileRecord(BaseModel):
         json_schema_extra={"example": False},
     )
 
-
-class ScanResponse(BaseModel):
-    """Response model containing scan results for a repository."""
-
-    repo_root: str = Field(
-        description="Absolute (recommended) or relative (if relative path is provided) path to the root of the scanned repository",
-        json_schema_extra={"examples": ["/path/to/repository", "../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
-    )
-    scanned_count: int = Field(
-        description="Number of files successfully scanned",
-        json_schema_extra={"example": 150},
-    )
-    skipped_count: int = Field(
-        description="Number of files that were not scanned due to being binary or excluded.",
-        json_schema_extra={"example": 5},
-    )
-
-
+# TODO consolidate summary and scan parameters into a single model
 class SummaryParams(BaseModel):
     """Parameters for repository summary scan request."""
     
@@ -84,22 +67,13 @@ class SummaryParams(BaseModel):
         description="Path to the repository root directory to scan",
         json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
     )
-    output_dir: str = Field(
-        default="output",
-        description="Directory relative to repo_root where the summary JSON file will be written",
-        json_schema_extra={"examples": ["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"]},
-    )
-    output_file: str | None = Field(
-        default=None,
-        description="Optional filename for the summary JSON file. If not provided, a default name will be generated based on repository name and timestamp",
-        json_schema_extra={"example": "sample_repo_YYYYmmdd_HHMMSS.summary.txt"},
-    )
-    output_file_format: Literal["json", "markdown"] = Field(
+    output_file_format: Literal["json", "markdown", "csv"] = Field(
         default="markdown",
-        description="Format of the output file. Defaults to markdown if blank/not provided. Other option is json. Markdown is a human-readable markdown table.",
-        json_schema_extra={"examples": ["json", "markdown"]},
+        description="Format of the output file. Defaults to markdown if blank/not provided. Other options are json and csv. Markdown and csv output tables.",
+        json_schema_extra={"examples": ["json", "markdown", "csv"]},
     )
 
+# TODO consolidate summary and scan parameters into a single model
 class ScanParams(BaseModel):
     """Parameters for repository scan request."""
     
@@ -108,19 +82,9 @@ class ScanParams(BaseModel):
         description="Path to the repository root directory to scan",
         json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
     )
-    output_dir: str = Field(
-        default="output",
-        description="Directory relative to repo_root where the output file will be written",
-        json_schema_extra={"examples": ["output", "../../relative/path/to/output", "C:\\absolute\\path\\to\\sample_repo\\output"]},
-    )
-    output_file: str | None = Field(
-        default=None,
-        description="Optional filename for the output file. If not provided, a default name will be generated based on repository name and timestamp",
-        json_schema_extra={"example": "sample_repo_YYYYmmdd_HHMMSS.scan.json"},
-    )
     output_file_format: Literal["json", "markdown", "csv"] = Field(
         default="json",
-        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown is a human-readable markdown table. CSV is a comma-separated values file.",
+        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown and csv output tables.",
         json_schema_extra={"examples": ["json", "markdown", "csv"]},
     )
 
@@ -187,6 +151,19 @@ class RepositorySummary(BaseModel):
         description="Number of files skipped during scanning",
         json_schema_extra={"example": 5},
     )
+class ScanResponse(BaseModel):
+    """Response model containing scan results for a repository."""
+
+    status: Literal["success", "error"] = Field(
+        description="Status of the scan operation: 'success' or 'error'",
+        json_schema_extra={"example": "success"},   
+    )
+    error: str | None = Field(
+        default=None,
+        description="Error message if the scan operation failed (status='error')",
+        json_schema_extra={"example": None},
+    )
+
 
 class SummaryResponse(BaseModel):
     """Response model containing summary results for a repository."""
@@ -195,34 +172,16 @@ class SummaryResponse(BaseModel):
         description="Status of the scan operation: 'success' or 'error'",
         json_schema_extra={"example": "success"},
     )
-    summary: str | None = Field(
-        default=None,
-        description="Summary of the repository contents. If the summary generation failed, this will be None.",
-        json_schema_extra={"example": None},
-    )
     repository_summary: RepositorySummary = Field(
         description="Summary of the repository contents",
         #json_schema_extra={"example": RepositorySummary(self, files_by_language={"javascript": 1}, files_by_category={"code": 1}, files_by_technology={"Docker": 1}, files_by_dependency={"python-requirements": 1}, files_by_extension={".js": 1}, binary_files_by_extension={".png": 1}, files_without_extension=0, files_with_extension=1, data_files_by_extension={"csv": 1}, total_files=1, scanned_files=1, skipped_files=0)},
-    )
-    repo_root: str = Field(
-        description="Absolute path to the root of the scanned repository",
-        json_schema_extra={"example": "/path/to/repository"},
-    )
-    files_scanned: int | None = Field(
-        default=None,
-        description="Number of files successfully scanned",
-        json_schema_extra={"example": 150},
-    )
-    files_skipped: int | None = Field(
-        default=None,
-        description="Number of files skipped during scanning (e.g., binary files, excluded directories)",
-        json_schema_extra={"example": 5},
     )
     error: str | None = Field(
         default=None,
         description="Error message if the scan operation failed (status='error')",
         json_schema_extra={"example": None},
     )
+    # TODO: consider adding the output file path to the response
 
 class ScanResponse(BaseModel):
     """Response model containing scan results for a repository."""
@@ -231,25 +190,9 @@ class ScanResponse(BaseModel):
         description="Status of the scan operation: 'success' or 'error'",
         json_schema_extra={"example": "success"},
     )
-    repo_root: str = Field(
-        description="Absolute path to the root of the scanned repository",
-        json_schema_extra={"example": "/path/to/repository"},
-    )
-    files_scanned: int = Field(
-        description="Number of files successfully scanned",
-        json_schema_extra={"example": 150},
-    )
-    files_skipped: int = Field(
-        description="Number of files skipped during scanning",
-        json_schema_extra={"example": 5},
-    )
     error: str | None = Field(
         default=None,
         description="Error message if the scan operation failed (status='error')",
         json_schema_extra={"example": None},
     )
-    output_file: str | None = Field(
-        default=None,
-        description="Path to the output file",
-        json_schema_extra={"example": "/path/to/repository/output/sample_repo_YYYYmmdd_HHMMSS.scan.json"},
-    )
+    # TODO: Add output_file?
