@@ -14,6 +14,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
 
+from pydantic import ValidationError
+
 from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OutputFormat
 from gcrs.logger import setup_logging
 from gcrs.models import FileRecord, RepositorySummary, ScanResponse, SummaryResponse
@@ -251,13 +253,16 @@ def walk_the_repo(repo_root: Path) -> Iterable[Path]:
         An iterable of Path objects for all files in the repository.
     """
     logger.debug("walk_the_repo() is walking the repository starting at repo_root: %s", repo_root)
-    for dirpath, subdirectories, filenames in os.walk(repo_root):
-        subdirectories[:] = [
-            d for d in subdirectories if d not in SKIP_DIRS
-        ]  # TODO: skip what's in .gitignore
-        for fname in filenames:
-            yield Path(dirpath) / fname
-
+    try:
+        for dirpath, subdirectories, filenames in os.walk(repo_root):
+            subdirectories[:] = [
+                d for d in subdirectories if d not in SKIP_DIRS
+            ]  # TODO: skip what's in .gitignore
+            for fname in filenames:
+                yield Path(dirpath) / fname
+    except OSError as e:
+        logger.error("walk_the_repo() error walking the repository: %s", e)
+        raise OSError(f"Error walking the repository: {e}")
     logger.debug("walk_the_repo() is finished walking the repository")
 
 # ---- format the summary as markdown ----
@@ -335,15 +340,18 @@ def escape_markdown_table_cells(cell: str) -> str:
     Returns:
         An escaped markdown table cell.
     """
-    cell = cell.replace("|", "\\|")
-    cell = cell.replace("*", "\\*")
-    cell = cell.replace("_", "\\_")
-    cell = cell.replace("~", "\\~")
-    cell = cell.replace("`", "\\`")
-    cell = cell.replace("^", "\\^")
-    cell = cell.replace("$", "\\$")
-    cell = cell.replace("#", "\\#")
-    cell = cell.replace("&", "\\&")
+    translation_table = str.maketrans({
+        "|": "\\|",
+        "*": "\\*",
+        "_": "\\_",
+        "~": "\\~",
+        "`": "\\`",
+        "^": "\\^",
+        "$": "\\$",
+        "#": "\\#",
+        "&": "\\&",
+    })
+    cell = cell.translate(translation_table)
     return cell
 
 # ---- format the file records as markdown ----
@@ -511,13 +519,13 @@ def scan_repository(repo_root_path: Path, output_file_path: Path,
     logger.debug("scan_repository(): start")
     try:
         file_records, summary = do_the_repo_scan(repo_root_path)
-    except Exception as e:
-        logger.error("scan_repository(): error scanning repository: %s", e)
+        write_file_records_to_file(file_records=file_records, output_file_path=output_file_path, output_file_format=output_file_format)
+    except (OSError, ValueError, ValidationError) as e:
+        logger.error("scan_repository(): error scanning repository or writing file: %s", e)
         return ScanResponse(
             status="error",
             error=str(e),
         )
-    write_file_records_to_file(file_records=file_records, output_file_path=output_file_path, output_file_format=output_file_format)
     return ScanResponse(
         status="success",
         error=None,
@@ -544,14 +552,14 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
 
     try:
         _, summary = do_the_repo_scan(repo_root_path)
-    except Exception as e:
-        logger.error("summarize_repo_contents(): error summarizing repository: %s", e)
+        write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
+    except (OSError, ValueError, ValidationError) as e:
+        logger.error("summarize_repo_contents(): error summarizing repository or writing file: %s", e)
         return SummaryResponse(
             status="error",
             error=str(e),
             repository_summary=None,
         )
-    write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
     return SummaryResponse(
         status="success",
         repository_summary=summary,
