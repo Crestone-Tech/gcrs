@@ -210,6 +210,7 @@ CATEGORY_BY_EXT = {
 CI_FILENAMES = {"Jenkinsfile", ".gitlab-ci.yml", "azure-pipelines.yml"}
 CI_DIR_HINTS = {".github/workflows", ".circleci"}
 
+# small helper functions
 # ---- check if a file extension is in the list of binary extensions ----
 def is_binary_ext(ext: str) -> bool:
     """Check if a file extension is in the list of binary extensions.
@@ -222,7 +223,6 @@ def is_binary_ext(ext: str) -> bool:
     """
     return ext in BINARY_EXTENSIONS
 
-
 # ---- check if a file extension is in the list of data extensions ----
 def is_data_ext(ext: str) -> bool:
     """Check if a file extension is in the list of data extensions.
@@ -234,6 +234,7 @@ def is_data_ext(ext: str) -> bool:
         True if the extension is in the list of data extensions, False otherwise.
     """
     return ext in DATA_TYPES_BY_EXTENSION
+
 
 
 # ---- walk the repository and yield all files that are not in the skip directories ----
@@ -255,19 +256,6 @@ def walk_the_repo(repo_root: Path) -> Iterable[str]:
             yield Path(dirpath) / fname
 
     logger.debug("walk_the_repo() is finished walking the repository")
-
-# ---- parse the file records and output a summary of the contents ----
-# def parse_summary(file_records: list[FileRecord]) -> str:
-#     """Parse the summary of the repository contents.
-
-#     Args:
-#         file_records: List of FileRecord objects.
-
-#     Returns:
-#         A string summarizing the contents of the repository.
-#     """
-#     summary_lines = [f"{file_record.relative_dir}/{file_record.name}" for file_record in file_records]
-#     return "\n".join(summary_lines)
 
 # ---- format the summary as markdown ----
 def format_summary_as_markdown(summary: RepositorySummary) -> str:
@@ -415,39 +403,8 @@ def write_file_records_to_file(file_records: list[FileRecord], output_file_path:
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file_path.name)
 
-# ---- scan the repo and output a summary of the contents ----
-def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
-    output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
-    """Summarize the contents of the repository.
 
-    Scans the repository, generates a summary of its contents, and writes the
-    summary to the specified output file.
-
-    Args:
-        repo_root_path: Path to the root of the repository to scan.
-        output_file_path: Path to the output file where the summary will be written.
-        output_file_format: Format of the output file, either "json" or "markdown".
-            Defaults to "markdown".
-
-    Returns:
-        A SummaryResponse object containing the repository summary and scan status.
-    """
-    logger.debug("summarize_repo_contents(): start")
-
-    try:
-        _, summary = do_the_repo_scan(repo_root_path)
-    except Exception as e:
-        logger.error("summarize_repo_contents(): error summarizing repository: %s", e)
-        return SummaryResponse(
-            status="error",
-            error=str(e),
-            repository_summary=None,
-        )
-    write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
-    return SummaryResponse(
-        status="success",
-        repository_summary=summary,
-    )
+######## HELPER METHODS ########
 
 # ---- scan repo and return a list of file records and a summary of the repository contents ----
 def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary]:
@@ -515,7 +472,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
         if dependency_kind:
             summary.files_by_dependency[dependency_kind] = summary.files_by_dependency.get(dependency_kind, 0) + 1
         if data_type:
-            summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
+        summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
         if technology:
             summary.files_by_technology[technology] = summary.files_by_technology.get(technology, 0) + 1
     summary.total_files = total_files
@@ -526,6 +483,8 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     logger.debug("do_the_repo_scan(): end")
     return file_records, summary
 
+
+######## ENDPOINT METHODS ########
 def scan_repository(repo_root_path: Path, output_file_path: Path,
     output_file_format: Literal["json", "markdown"] = "markdown") -> ScanResponse:
     """Scan the repo, write file information to the output file.
@@ -547,31 +506,36 @@ def scan_repository(repo_root_path: Path, output_file_path: Path,
         error=None,
     )
 
-# ---- Shebang detection ----
-# def detect_shebang_language(p: Path) -> Optional[str]:
-#     """Detect the programming language from a file's shebang line.
+# ---- scan the repo and output a summary of the contents ----
+def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
+    output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
+    """Summarize the contents of the repository.
 
-#     Args:
-#         p: Path to the file to check.
+    Scans the repository, generates a summary of its contents, and writes the
+    summary to the specified output file.
 
-#     Returns:
-#         The detected language name (e.g., "python", "bash", "javascript") or None.
-#     """
-#     try:
-#         with p.open('r', encoding='utf-8',errors='ignore') as f:
-#             first_line = f.readline(200).strip().lower()
-#     except Exception:
-#         return None
-#     if not first_line.startswith('#!'):
-#         return None
-#     if "python" in first_line:
-#         return "python"
-#     if "bash" in first_line or "sh" in first_line:
-#         return "bash"
-#     if "node" in first_line:
-#         return "javascript"
-#     if "ruby" in first_line:
-#         return "ruby"
-#     if "perl" in first_line:
-#         return "perl"
-#     return None
+    Args:
+        repo_root_path: Path to the root of the repository to scan.
+        output_file_path: Path to the output file where the summary will be written.
+        output_file_format: Format of the output file, either "json" or "markdown".
+            Defaults to "markdown".
+
+    Returns:
+        A SummaryResponse object containing the repository summary and scan status.
+    """
+    logger.debug("summarize_repo_contents(): start")
+
+    try:
+        _, summary = do_the_repo_scan(repo_root_path)
+    except Exception as e:
+        logger.error("summarize_repo_contents(): error summarizing repository: %s", e)
+        return SummaryResponse(
+            status="error",
+            error=str(e),
+            repository_summary=None,
+        )
+    write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
+    return SummaryResponse(
+        status="success",
+        repository_summary=summary,
+    )
