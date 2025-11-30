@@ -9,10 +9,9 @@ from __future__ import annotations
 
 import json
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Literal
 
 from pydantic import ValidationError
 
@@ -114,7 +113,7 @@ LANGUAGE_BY_EXT = {
     ".vb": "vb",
 }
 
-# ---- map dependency files to their kind ----
+# Dependency files mapped to their kind
 DEPENDENCY_KIND_BY_NAME = {
     "requirements.txt": "python-requirements",
     "pyproject.toml": "python-pyproject",
@@ -180,7 +179,7 @@ TECHNOLOGY_PATTERNS = {
     **TECHNOLOGY_FROM_DEPENDENCIES,
 }
 
-# ---- map file extensions to their category ----
+# File extensions mapped to their category
 CATEGORY_BY_EXT = {
     # code
     **dict.fromkeys(LANGUAGE_BY_EXT, "code"),
@@ -215,8 +214,6 @@ CATEGORY_BY_EXT = {
 CI_FILENAMES = {"Jenkinsfile", ".gitlab-ci.yml", "azure-pipelines.yml"}
 CI_DIR_HINTS = {".github/workflows", ".circleci"}
 
-# small helper functions
-# ---- check if a file extension is in the list of binary extensions ----
 def is_binary_ext(ext: str) -> bool:
     """Check if a file extension is in the list of binary extensions.
 
@@ -228,7 +225,7 @@ def is_binary_ext(ext: str) -> bool:
     """
     return ext in BINARY_EXTENSIONS
 
-# ---- check if a file extension is in the list of data extensions ----
+
 def is_data_ext(ext: str) -> bool:
     """Check if a file extension is in the list of data extensions.
 
@@ -241,16 +238,14 @@ def is_data_ext(ext: str) -> bool:
     return ext in DATA_TYPES_BY_EXTENSION
 
 
-
-# ---- walk the repository and yield all files that are not in the skip directories ----
 def walk_the_repo(repo_root: Path) -> Iterable[Path]:
     """Walk the repository and yield all files that are not in the skip directories.
 
     Args:
         repo_root: Path to the root of the repository.
 
-    Returns:
-        An iterable of Path objects for all files in the repository.
+    Yields:
+        Path objects for all files in the repository.
     """
     logger.debug("walk_the_repo() is walking the repository starting at repo_root: %s", repo_root)
     try:
@@ -262,10 +257,9 @@ def walk_the_repo(repo_root: Path) -> Iterable[Path]:
                 yield Path(dirpath) / fname
     except OSError as e:
         logger.error("walk_the_repo() error walking the repository: %s", e)
-        raise OSError(f"Error walking the repository: {e}")
+        raise # re-raise the exception to be handled by the caller
     logger.debug("walk_the_repo() is finished walking the repository")
 
-# ---- format the summary as markdown ----
 def format_summary_as_markdown(summary: RepositorySummary) -> str:
     """Format the summary as markdown.
 
@@ -275,7 +269,6 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
     Returns:
         A markdown-formatted string representation of the repository summary.
     """
-
     markdown_lines = []
     markdown_lines.append(f"# Repository Summary")
     markdown_lines.append(f"## Total Files: {summary.total_files}")
@@ -303,24 +296,26 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
         markdown_lines.append(f"  - {extension}: {count}")
 
     return "\n".join(markdown_lines)
-# ---- write the summary to a file ----
-def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
-    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN):
+
+
+def write_summary_to_file(
+    summary: RepositorySummary,
+    output_file_path: Path,
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+) -> None:
     """Write the summary to a file.
 
     Args:
         summary: RepositorySummary object containing repository statistics.
         output_file_path: Path to the output file where the summary will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
-          Defaults to "markdown".
+            Defaults to "markdown".
 
     Raises:
         ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
     logger.debug("write_summary_to_file(): writing summary to file: %s", output_file_path)
     with open(output_file_path, "w", encoding="utf-8") as f:
-        # The summary object is a Pydantic model, so you can serialize it to JSON and write it to a file.
-        # This uses the Pydantic model's model_dump_json() method to dump as JSON.
         json_str = summary.model_dump_json(indent=2)
         if output_file_format == OUTPUT_FORMAT_JSON:
             f.write(json_str)
@@ -330,7 +325,7 @@ def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
 
-# escape markdown table cells
+
 def escape_markdown_table_cells(cell: str) -> str:
     """Escape markdown table cells.
 
@@ -351,10 +346,9 @@ def escape_markdown_table_cells(cell: str) -> str:
         "#": "\\#",
         "&": "\\&",
     })
-    cell = cell.translate(translation_table)
-    return cell
+    return cell.translate(translation_table)
 
-# ---- format the file records as markdown ----
+
 def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
     """Format the file records as markdown.
 
@@ -365,14 +359,18 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
         A markdown-formatted string representation of the file records.
     """
     markdown_lines = []
-    markdown_lines.append(f"# File Records")
+    markdown_lines.append("# File Records")
     markdown_lines.append(f"## Total Files: {len(file_records)}")
-    markdown_lines.append(f"## Files:")
-    # Write a table header for the file records
+    markdown_lines.append("## Files:")
     markdown_lines.append("")
-    markdown_lines.append("| Name | Extension | Relative Dir | Language | Category | Data Type | Dependency Kind | Size (bytes) | Binary |")
-    markdown_lines.append("|------|-----------|--------------|----------|----------|--------------|-----------------|--------------|--------|")
-    # Write each file record as a row in the markdown table
+    markdown_lines.append(
+        "| Name | Extension | Relative Dir | Language | Category | Data Type | "
+        "Dependency Kind | Size (bytes) | Binary |"
+    )
+    markdown_lines.append(
+        "|------|-----------|--------------|----------|----------|--------------|"
+        "-----------------|--------------|--------|"
+    )
     for file_record in file_records:
         markdown_lines.append(
             f"| {escape_markdown_table_cells(file_record.name)} "
@@ -387,9 +385,12 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
         )
     return "\n".join(markdown_lines)
 
-# ---- write the file records to a file ----
-def write_file_records_to_file(file_records: list[FileRecord], output_file_path: Path,
-    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> None:
+
+def write_file_records_to_file(
+    file_records: list[FileRecord],
+    output_file_path: Path,
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+) -> None:
     """Write the file records to a file.
 
     Args:
@@ -397,15 +398,12 @@ def write_file_records_to_file(file_records: list[FileRecord], output_file_path:
         output_file_path: Path to the output file where the file records will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
 
-
-        Raises:
+    Raises:
         ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
     logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file_path)
     with open(output_file_path, "w", encoding="utf-8") as f:
         if output_file_format == OUTPUT_FORMAT_JSON:
-            # Use Pydantic's model_dump() to convert models to dicts, then serialize to JSON
-            # This is the recommended pattern for serializing lists of Pydantic models
             file_records_dict = [record.model_dump() for record in file_records]
             json.dump(file_records_dict, f, indent=2)
         elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
@@ -417,7 +415,6 @@ def write_file_records_to_file(file_records: list[FileRecord], output_file_path:
 
 ######## HELPER METHODS ########
 
-# ---- scan repo and return a list of file records and a summary of the repository contents ----
 def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
@@ -433,7 +430,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     total_files = 0
     files_without_extension = 0
     files_with_extension = 0
-    
+
     # Use Counter objects for efficient counting during accumulation
     files_by_language_counter = Counter()
     files_by_category_counter = Counter()
@@ -442,7 +439,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     files_by_dependency_counter = Counter()
     data_files_by_extension_counter = Counter()
     files_by_technology_counter = Counter()
-    
+
     for filename in filenames:
         total_files += 1
         relative_dir = filename.relative_to(repo_root_path).as_posix()
@@ -464,13 +461,13 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
             category=category,
             language=language,
             data_type=data_type,
-            #technologies=technology, # TODO: add technologies to the file record
+            # technologies=technology,  # TODO: add technologies to the file record
             dependency_kind=dependency_kind,
             size_bytes=size_bytes,
             is_binary=is_binary
         )
         file_records.append(new_file_record)
-        
+
         # Use Counter's efficient += operator (handles missing keys automatically)
         if language:
             files_by_language_counter[language] += 1
@@ -489,7 +486,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
             data_files_by_extension_counter[data_type] += 1
         if technology:
             files_by_technology_counter[technology] += 1
-    
+
     # Convert Counter objects to dicts for Pydantic model (which expects dict[str, int])
     summary = RepositorySummary(
         files_by_language=dict(files_by_language_counter),
@@ -509,9 +506,11 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     return file_records, summary
 
 
-######## ENDPOINT METHODS ########
-def scan_repository(repo_root_path: Path, output_file_path: Path,
-    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> ScanResponse:
+def scan_repository(
+    repo_root_path: Path,
+    output_file_path: Path,
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+) -> ScanResponse:
     """Scan the repo, write file information to the output file.
 
     Scans the repository, writes file information to the output file.
@@ -531,9 +530,12 @@ def scan_repository(repo_root_path: Path, output_file_path: Path,
         error=None,
     )
 
-# ---- scan the repo and output a summary of the contents ----
-def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
-    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> SummaryResponse:
+
+def summarize_repo_contents(
+    repo_root_path: Path,
+    output_file_path: Path,
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+) -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Scans the repository, generates a summary of its contents, and writes the
