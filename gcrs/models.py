@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from gcrs.constants import OUTPUT_FORMAT_JSON, OutputFormat
+
 class FileRecord(BaseModel):
     """Represents a file record with metadata about a file in a repository."""
 
@@ -66,8 +68,8 @@ class ScanParams(BaseModel):
         description="Path to the repository root directory to scan",
         json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
     )
-    output_file_format: Literal["json", "markdown", "csv"] = Field(
-        default="json",
+    output_file_format: OutputFormat = Field(
+        default=OUTPUT_FORMAT_JSON,
         description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown and csv output tables.",
         json_schema_extra={"examples": ["json", "markdown", "csv"]},
     )

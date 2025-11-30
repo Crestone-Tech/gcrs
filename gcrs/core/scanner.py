@@ -7,18 +7,21 @@ file characteristics, and generating structured summaries.
 """
 from __future__ import annotations
 
+import json
 import os
+from collections import Counter, defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Literal
-import json
+
+from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OutputFormat
 from gcrs.logger import setup_logging
-from gcrs.models import FileRecord, RepositorySummary, SummaryResponse, ScanResponse
+from gcrs.models import FileRecord, RepositorySummary, ScanResponse, SummaryResponse
 
 logger = setup_logging(log_level="DEBUG")
 
-# ---- list of directories to skip ----
-SKIP_DIRS = {
+# Directories to skip during repository scanning
+SKIP_DIRS = frozenset({
     ".git",
     "node_modules",
     ".venv",
@@ -33,10 +36,10 @@ SKIP_DIRS = {
     ".vscode",
     ".DS_Store",
     "output",
-}
+})
 
-# ---- list of binary file extensions ----
-BINARY_EXTENSIONS = {
+# Binary file extensions
+BINARY_EXTENSIONS = frozenset({
     ".jpg",
     ".jpeg",
     ".png",
@@ -64,9 +67,9 @@ BINARY_EXTENSIONS = {
     ".mp4",
     ".mov",
     ".avi",
-}
+})
 
-# ---- list of data file extensions ----
+# Data file extensions mapped to their types
 DATA_TYPES_BY_EXTENSION = {
     ".csv": "csv",
     ".jsonl": "jsonl",
@@ -78,7 +81,7 @@ DATA_TYPES_BY_EXTENSION = {
     ".ndjson": "ndjson",
 }
 
-# ---- map file extensions to their language ----
+# File extensions mapped to programming languages
 LANGUAGE_BY_EXT = {
     ".c": "c",
     ".cpp": "cpp",
@@ -297,26 +300,26 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
     return "\n".join(markdown_lines)
 # ---- write the summary to a file ----
 def write_summary_to_file(summary: RepositorySummary, output_file_path: Path,
-    output_file_format: Literal["json", "markdown"] = "markdown"):
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN):
     """Write the summary to a file.
 
     Args:
         summary: RepositorySummary object containing repository statistics.
         output_file_path: Path to the output file where the summary will be written.
-        output_file_format: Format of the output file, either "json" or "markdown".
-            Defaults to "markdown".
+        output_file_format: Format of the output file, either "json", "markdown", or "csv".
+          Defaults to "markdown".
 
     Raises:
-        ValueError: If output_file_format is not "json" or "markdown".
+        ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
     logger.debug("write_summary_to_file(): writing summary to file: %s", output_file_path)
     with open(output_file_path, "w", encoding="utf-8") as f:
         # The summary object is a Pydantic model, so you can serialize it to JSON and write it to a file.
         # This uses the Pydantic model's model_dump_json() method to dump as JSON.
         json_str = summary.model_dump_json(indent=2)
-        if output_file_format == "json":
+        if output_file_format == OUTPUT_FORMAT_JSON:
             f.write(json_str)
-        elif output_file_format == "markdown":
+        elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_summary_as_markdown(summary))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
@@ -378,26 +381,26 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
 
 # ---- write the file records to a file ----
 def write_file_records_to_file(file_records: list[FileRecord], output_file_path: Path,
-    output_file_format: Literal["json", "markdown"] = "markdown") -> None:
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> None:
     """Write the file records to a file.
 
     Args:
         file_records: List of FileRecord objects to write.
         output_file_path: Path to the output file where the file records will be written.
-        output_file_format: Format of the output file, either "json" or "markdown".
+        output_file_format: Format of the output file, either "json", "markdown", or "csv".
 
 
         Raises:
-        ValueError: If output_file_format is not "json" or "markdown".
+        ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
     logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file_path)
     with open(output_file_path, "w", encoding="utf-8") as f:
-        if output_file_format == "json":
+        if output_file_format == OUTPUT_FORMAT_JSON:
             # Use Pydantic's model_dump() to convert models to dicts, then serialize to JSON
             # This is the recommended pattern for serializing lists of Pydantic models
             file_records_dict = [record.model_dump() for record in file_records]
             json.dump(file_records_dict, f, indent=2)
-        elif output_file_format == "markdown":
+        elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_file_records_as_markdown(file_records))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
@@ -472,7 +475,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
         if dependency_kind:
             summary.files_by_dependency[dependency_kind] = summary.files_by_dependency.get(dependency_kind, 0) + 1
         if data_type:
-        summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
+            summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
         if technology:
             summary.files_by_technology[technology] = summary.files_by_technology.get(technology, 0) + 1
     summary.total_files = total_files
@@ -486,7 +489,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
 
 ######## ENDPOINT METHODS ########
 def scan_repository(repo_root_path: Path, output_file_path: Path,
-    output_file_format: Literal["json", "markdown"] = "markdown") -> ScanResponse:
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> ScanResponse:
     """Scan the repo, write file information to the output file.
 
     Scans the repository, writes file information to the output file.
@@ -508,7 +511,7 @@ def scan_repository(repo_root_path: Path, output_file_path: Path,
 
 # ---- scan the repo and output a summary of the contents ----
 def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
-    output_file_format: Literal["json", "markdown"] = "markdown") -> SummaryResponse:
+    output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN) -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Scans the repository, generates a summary of its contents, and writes the
@@ -517,7 +520,7 @@ def summarize_repo_contents(repo_root_path: Path, output_file_path: Path,
     Args:
         repo_root_path: Path to the root of the repository to scan.
         output_file_path: Path to the output file where the summary will be written.
-        output_file_format: Format of the output file, either "json" or "markdown".
+        output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
 
     Returns:

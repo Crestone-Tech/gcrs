@@ -1,21 +1,15 @@
 # standard library imports
 from pathlib import Path
 from datetime import datetime
-from typing import Literal
 from fastapi import HTTPException, status
+from typing import Literal
 
 # local imports
+from gcrs.constants import OUTPUT_FORMAT_JSON, OutputFormat, OUTPUT_FILE_FORMAT_EXTENSIONS
 from gcrs.logger import setup_logging
 
 # setup logging
 logger = setup_logging(log_level="DEBUG")
-
-# dictionary that maps output file formats to their corresponding file extensions
-OUTPUT_FILE_FORMAT_EXTENSIONS = {
-    "json": ".json",
-    "markdown": ".md",
-    "csv": ".csv",
-}
 
 def validate_directory_path(path: str) -> Path | None:
     """Validate a directory path.
@@ -66,7 +60,7 @@ def validate_root_and_output_directory(repo_root: str) -> tuple[Path, Path]:
 
     return (repo_root_path, output_dir_path)
 
-def generate_output_filename(repo_root: str, operation: Literal["scan", "summary"] = "scan", output_file_format: Literal["json", "markdown", "csv"] = "json") -> str:
+def generate_output_filename(repo_root: str, operation: Literal["scan", "summary"] = "scan", output_file_format: OutputFormat = OUTPUT_FORMAT_JSON) -> str:
     """Generate a default output filename with repo name and timestamp.
     
     Args:
