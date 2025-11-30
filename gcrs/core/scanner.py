@@ -241,7 +241,7 @@ def is_data_ext(ext: str) -> bool:
 
 
 # ---- walk the repository and yield all files that are not in the skip directories ----
-def walk_the_repo(repo_root: Path) -> Iterable[str]:
+def walk_the_repo(repo_root: Path) -> Iterable[Path]:
     """Walk the repository and yield all files that are not in the skip directories.
 
     Args:
@@ -425,14 +425,16 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     total_files = 0
     files_without_extension = 0
     files_with_extension = 0
-    summary = RepositorySummary(
-        files_by_language={},
-        files_by_category={},
-        data_files_by_extension={},
-        files_by_technology={},
-        files_by_dependency={},
-        files_by_extension={}
-    )
+    
+    # Use Counter objects for efficient counting during accumulation
+    files_by_language_counter = Counter()
+    files_by_category_counter = Counter()
+    files_by_extension_counter = Counter()
+    binary_files_by_extension_counter = Counter()
+    files_by_dependency_counter = Counter()
+    data_files_by_extension_counter = Counter()
+    files_by_technology_counter = Counter()
+    
     for filename in filenames:
         total_files += 1
         relative_dir = filename.relative_to(repo_root_path).as_posix()
@@ -461,28 +463,40 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
         )
         file_records.append(new_file_record)
         
+        # Use Counter's efficient += operator (handles missing keys automatically)
         if language:
-            summary.files_by_language[language] = summary.files_by_language.get(language, 0) + 1
+            files_by_language_counter[language] += 1
         if category:
-            summary.files_by_category[category] = summary.files_by_category.get(category, 0) + 1
+            files_by_category_counter[category] += 1
         if not extension:
             files_without_extension += 1
         else:
             files_with_extension += 1
-            summary.files_by_extension[extension] = summary.files_by_extension.get(extension, 0) + 1
+            files_by_extension_counter[extension] += 1
         if extension and is_binary:
-            summary.binary_files_by_extension[extension] = summary.binary_files_by_extension.get(extension, 0) + 1
+            binary_files_by_extension_counter[extension] += 1
         if dependency_kind:
-            summary.files_by_dependency[dependency_kind] = summary.files_by_dependency.get(dependency_kind, 0) + 1
+            files_by_dependency_counter[dependency_kind] += 1
         if data_type:
-            summary.data_files_by_extension[data_type] = summary.data_files_by_extension.get(data_type, 0) + 1
+            data_files_by_extension_counter[data_type] += 1
         if technology:
-            summary.files_by_technology[technology] = summary.files_by_technology.get(technology, 0) + 1
-    summary.total_files = total_files
-    summary.files_without_extension = files_without_extension
-    summary.files_with_extension = files_with_extension
-    summary.scanned_files = len(file_records)
-    summary.skipped_files = total_files - len(file_records)
+            files_by_technology_counter[technology] += 1
+    
+    # Convert Counter objects to dicts for Pydantic model (which expects dict[str, int])
+    summary = RepositorySummary(
+        files_by_language=dict(files_by_language_counter),
+        files_by_category=dict(files_by_category_counter),
+        data_files_by_extension=dict(data_files_by_extension_counter),
+        files_by_technology=dict(files_by_technology_counter),
+        files_by_dependency=dict(files_by_dependency_counter),
+        files_by_extension=dict(files_by_extension_counter),
+        binary_files_by_extension=dict(binary_files_by_extension_counter),
+        total_files=total_files,
+        files_without_extension=files_without_extension,
+        files_with_extension=files_with_extension,
+        scanned_files=len(file_records),
+        skipped_files=total_files - len(file_records)
+    )
     logger.debug("do_the_repo_scan(): end")
     return file_records, summary
 
