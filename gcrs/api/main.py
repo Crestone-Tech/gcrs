@@ -68,7 +68,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
 
     **Parameters:**
     - `repo_root`: Path to the repository root directory
-    - `output_file_format`: Format of the output file, either "json" or "markdown" or "csv". Defaults to "json".
+    - `output_file_format`: Format of the output file, either "json", "markdown", or "csv". Defaults to "json".
 
     **Returns:**
     - `status`: "success" or "error"
@@ -124,7 +124,7 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
     
     **Parameters:**
     - `repo_root`: Path to the repository root directory (default: ".")
-    - `output_file_format`: Format of the output file, either "json" or "markdown" or "csv". Defaults to "json".
+    - `output_file_format`: Format of the output file, either "json", "markdown", or "csv". Defaults to "json".
     
     **Returns:**
     - `status`: "success" or "error"
