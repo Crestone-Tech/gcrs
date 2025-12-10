@@ -66,10 +66,6 @@ async def health():
 async def scan_repository(params: ScanParams) -> ScanResponse:
     """Scans the repository and outputs details about each file in the repository.
 
-    **Parameters:**
-    - `repo_root`: Path to the repository root directory
-    - `output_file_format`: Format of the output file, either "json", "markdown", or "csv". Defaults to "json".
-
     **Returns:**
     - `status`: "success" or "error"
     - `error`: Error message if status is "error"
@@ -78,8 +74,8 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", params.repo_root)
 
     try:
-        # validate the repository root directory before proceeding
-        repo_root_path, output_dir_path = validate_root_and_output_directory(params.repo_root)
+        output_dir_path = params.repo_root / "output"
+        output_dir_path.mkdir(parents=True, exist_ok=True)
         output_file_path = output_dir_path / generate_output_filename(repo_root=str(repo_root_path.name), operation="scan", output_file_format=params.output_file_format)
 
         # scan the repository
