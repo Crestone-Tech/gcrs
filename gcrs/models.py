@@ -63,7 +63,7 @@ class FileRecord(BaseModel):
 
 class ScanOptions(BaseModel):
     """Options for repository scan request."""
-    repo_root_path: Path = Field(
+    repo_root: Path = Field(
         description="Path to the repository root directory to scan",
         json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
     )

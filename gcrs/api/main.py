@@ -1,7 +1,7 @@
 from __future__ import annotations
 from fastapi import FastAPI, HTTPException, status
 
-from gcrs.api.utils import validate_root_and_output_directory, generate_output_filename
+from gcrs.api.utils import generate_output_filename
 import gcrs.core.scanner as scanner
 from gcrs.logger import setup_logging
 from gcrs.models import SummaryResponse, ScanParams, ScanResponse
@@ -74,14 +74,14 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", params.repo_root)
 
     try:
-        output_dir_path = params.repo_root / "output"
-        output_dir_path.mkdir(parents=True, exist_ok=True)
-        output_file_path = output_dir_path / generate_output_filename(repo_root=str(repo_root_path.name), operation="scan", output_file_format=params.output_file_format)
+        output_dir = params.repo_root / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / generate_output_filename(repo_root=str(params.repo_root.name), operation="scan", output_file_format=params.output_file_format)
 
         # scan the repository
         scan_response = scanner.scan_repository(
-            repo_root_path=repo_root_path,
-            output_file_path=output_file_path,
+            repo_root=params.repo_root,
+            output_file=output_file,
             output_file_format=params.output_file_format,
         )
         logger.debug(
@@ -132,13 +132,14 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
 
     try:
         # validate the repository root directory before proceeding
-        repo_root_path, output_dir_path = validate_root_and_output_directory(params.repo_root)
-        output_file_path = output_dir_path / generate_output_filename(repo_root=str(repo_root_path.name), operation="summary", output_file_format=params.output_file_format)
+        output_dir = params.repo_root / "output"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = output_dir / generate_output_filename(repo_root=str(params.repo_root.name), operation="summary", output_file_format=params.output_file_format)
 
         # summarize the repository content
         summary_response = scanner.summarize_repo_contents(
-            repo_root_path=repo_root_path,
-            output_file_path=output_file_path,
+            repo_root=params.repo_root,
+            output_file=output_file,
             output_file_format=params.output_file_format,
         )
         logger.debug(

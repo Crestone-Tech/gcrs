@@ -300,22 +300,22 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
 
 def write_summary_to_file(
     summary: RepositorySummary,
-    output_file_path: Path,
+    output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
 ) -> None:
     """Write the summary to a file.
 
     Args:
         summary: RepositorySummary object containing repository statistics.
-        output_file_path: Path to the output file where the summary will be written.
+        output_file: Path to the output file where the summary will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
 
     Raises:
         ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
-    logger.debug("write_summary_to_file(): writing summary to file: %s", output_file_path)
-    with open(output_file_path, "w", encoding="utf-8") as f:
+    logger.debug("write_summary_to_file(): writing summary to file: %s", output_file)
+    with open(output_file, "w", encoding="utf-8") as f:
         json_str = summary.model_dump_json(indent=2)
         if output_file_format == OUTPUT_FORMAT_JSON:
             f.write(json_str)
@@ -323,7 +323,7 @@ def write_summary_to_file(
             f.write(format_summary_as_markdown(summary))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
-    logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file_path.name)
+    logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file.name)
 
 
 def escape_markdown_table_cells(cell: str) -> str:
@@ -388,21 +388,21 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
 
 def write_file_records_to_file(
     file_records: list[FileRecord],
-    output_file_path: Path,
+    output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
 ) -> None:
     """Write the file records to a file.
 
     Args:
         file_records: List of FileRecord objects to write.
-        output_file_path: Path to the output file where the file records will be written.
+        output_file: Path to the output file where the file records will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
 
     Raises:
         ValueError: If output_file_format is not "json", "markdown", or "csv".
     """
-    logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file_path)
-    with open(output_file_path, "w", encoding="utf-8") as f:
+    logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
+    with open(output_file, "w", encoding="utf-8") as f:
         if output_file_format == OUTPUT_FORMAT_JSON:
             file_records_dict = [record.model_dump() for record in file_records]
             json.dump(file_records_dict, f, indent=2)
@@ -410,23 +410,23 @@ def write_file_records_to_file(
             f.write(format_file_records_as_markdown(file_records))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
-    logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file_path.name)
+    logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file.name)
 
 
 ######## HELPER METHODS ########
 
-def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], RepositorySummary]:
+def do_the_repo_scan(repo_root: Path) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
     Args:
-        repo_root_path: Path to the root of the repository.
+        repo_root: Path to the root of the repository.
 
     Returns:
         A tuple containing a list of FileRecord objects for all files in the repository and a summary of the repository contents.
     """
     logger.debug("do_the_repo_scan(): start")
     file_records: list[FileRecord] = []
-    filenames = walk_the_repo(repo_root_path)
+    filenames = walk_the_repo(repo_root)
     total_files = 0
     files_without_extension = 0
     files_with_extension = 0
@@ -442,7 +442,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
 
     for filename in filenames:
         total_files += 1
-        relative_dir = filename.relative_to(repo_root_path).as_posix()
+        relative_dir = filename.relative_to(repo_root).as_posix()
         absolute_filename = str(filename.absolute())
         name = filename.name
         extension = filename.suffix.lower()
@@ -507,8 +507,8 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
 
 ######## ENDPOINT METHODS. That's why they are at the bottom of the file. ########
 def scan_repository(
-    repo_root_path: Path,
-    output_file_path: Path,
+    repo_root: Path,
+    output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
 ) -> ScanResponse:
     """Scan the repo, write file information to the output file.
@@ -517,8 +517,8 @@ def scan_repository(
     """
     logger.debug("scan_repository(): start")
     try:
-        file_records, summary = do_the_repo_scan(repo_root_path)
-        write_file_records_to_file(file_records=file_records, output_file_path=output_file_path, output_file_format=output_file_format)
+        file_records, summary = do_the_repo_scan(repo_root)
+        write_file_records_to_file(file_records=file_records, output_file=output_file, output_file_format=output_file_format)
     except (OSError, ValueError, ValidationError) as e:
         logger.error("scan_repository(): error scanning repository or writing file: %s", e)
         return ScanResponse(
@@ -532,8 +532,8 @@ def scan_repository(
 
 
 def summarize_repo_contents(
-    repo_root_path: Path,
-    output_file_path: Path,
+    repo_root: Path,
+    output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
 ) -> SummaryResponse:
     """Summarize the contents of the repository.
@@ -542,8 +542,8 @@ def summarize_repo_contents(
     summary to the specified output file.
 
     Args:
-        repo_root_path: Path to the root of the repository to scan.
-        output_file_path: Path to the output file where the summary will be written.
+        repo_root: Path to the root of the repository to scan.
+        output_file: Path to the output file where the summary will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
 
@@ -553,8 +553,8 @@ def summarize_repo_contents(
     logger.debug("summarize_repo_contents(): start")
 
     try:
-        _, summary = do_the_repo_scan(repo_root_path)
-        write_summary_to_file(summary=summary, output_file_path=output_file_path, output_file_format=output_file_format)
+        _, summary = do_the_repo_scan(repo_root)
+        write_summary_to_file(summary=summary, output_file=output_file, output_file_format=output_file_format)
     except (OSError, ValueError, ValidationError) as e:
         logger.error("summarize_repo_contents(): error summarizing repository or writing file: %s", e)
         return SummaryResponse(
