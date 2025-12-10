@@ -1,8 +1,9 @@
 """Pydantic models for the Green Cloud Repository Scanner."""
 
 from typing import Literal
+from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from gcrs.constants import OUTPUT_FORMAT_JSON, OutputFormat
 
@@ -60,6 +61,28 @@ class FileRecord(BaseModel):
         json_schema_extra={"example": False},
     )
 
+class ScanOptions(BaseModel):
+    """Options for repository scan request."""
+    repo_root_path: Path = Field(
+        description="Path to the repository root directory to scan",
+        json_schema_extra={"examples": [".", "/path/to/repository","../../relative/path/to/repository", "C:\\absolute\\path\\to\\sample_repo"]},
+    )
+    output_file_format: OutputFormat = Field(
+        default=OUTPUT_FORMAT_JSON,
+        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown and csv output tables.",
+        json_schema_extra={"examples": ["json", "markdown", "csv"]},
+    )
+    skip_dirs: list[str] = Field(
+        default_factory=list,
+        description="List of directories to skip during scanning",
+        json_schema_extra={"examples": [".git", "node_modules", "venv", "__pycache__"]},
+    )
+    respect_gitignore: bool = Field(
+        default=True,
+        description="Whether to respect .gitignore files during scanning",
+        json_schema_extra={"example": True},
+    )
+
 class ScanParams(BaseModel):
     """Parameters for repository scan request."""
     
@@ -73,6 +96,28 @@ class ScanParams(BaseModel):
         description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown and csv output tables.",
         json_schema_extra={"examples": ["json", "markdown", "csv"]},
     )
+    skip_dirs: list[str] = Field(
+        default_factory=list,
+        description="List of directories to skip during scanning",
+        json_schema_extra={"examples": [".git", "node_modules", "venv", "__pycache__"]},
+    )
+    # TODO: use respect_gitignore
+    respect_gitignore: bool = Field(
+        default=True,
+        description="Whether to respect .gitignore files during scanning",
+        json_schema_extra={"example": True},
+    )
+    
+    @field_validator('repo_root', mode='after')
+    @classmethod
+    def validate_repo_root(cls, v: str) -> Path:
+        """Convert string to Path and validate the repository root directory exists and is a directory."""
+        path = Path(v).resolve()
+        if not path.exists():
+            raise ValueError(f"The specified repository root directory does not exist: {path}")
+        if not path.is_dir():
+            raise ValueError(f"The specified repository root directory is not a directory: {path}")
+        return path
 
 class RepositorySummary(BaseModel):
     """Information about the repository."""
