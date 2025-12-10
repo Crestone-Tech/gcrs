@@ -505,7 +505,7 @@ def do_the_repo_scan(repo_root_path: Path) -> tuple[list[FileRecord], Repository
     logger.debug("do_the_repo_scan(): end")
     return file_records, summary
 
-
+######## ENDPOINT METHODS. That's why they are at the bottom of the file. ########
 def scan_repository(
     repo_root_path: Path,
     output_file_path: Path,
