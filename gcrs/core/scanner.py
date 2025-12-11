@@ -12,7 +12,7 @@ import os
 from collections import Counter
 from collections.abc import Iterable
 from pathlib import Path
-
+from pathspec import GitIgnoreSpec
 from pydantic import ValidationError
 
 from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OutputFormat
@@ -252,12 +252,55 @@ def walk_the_repo(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore:
     try:
         merged_skip_dirs = SKIP_DIRS.union(frozenset(skip_dirs))   # convert the list to a set and merge it with the default skip directories
         logger.debug("walk_the_repo() merged_skip_dirs: %s", merged_skip_dirs)
+        
+        # Build gitignore spec if needed
+        gitignore_spec = None
+        if respect_gitignore:
+            gitignore_path = repo_root / ".gitignore"
+            if gitignore_path.exists() and gitignore_path.is_file():
+                try:
+                    with open(gitignore_path, "r", encoding="utf-8") as f:
+                        gitignore_lines = f.readlines()
+                    gitignore_spec = GitIgnoreSpec.from_lines(gitignore_lines)
+                    logger.debug("walk_the_repo() loaded .gitignore from: %s", gitignore_path)
+                except (OSError, IOError) as e:
+                    logger.warning("walk_the_repo() failed to read .gitignore file: %s", e)
+            else:
+                logger.debug("walk_the_repo() no .gitignore file found at: %s", gitignore_path)
+        
         for dirpath, subdirectories, filenames in os.walk(repo_root):
-            subdirectories[:] = [
-                d for d in subdirectories if d not in merged_skip_dirs
-            ]  # TODO: skip what's in .gitignore
+            dirpath_path = Path(dirpath)
+            
+            # Filter subdirectories by skip_dirs and gitignore
+            filtered_subdirs = []
+            for d in subdirectories:
+                # Skip if in skip_dirs
+                if d in merged_skip_dirs:
+                    continue
+                
+                # Skip if matches gitignore pattern
+                if gitignore_spec:
+                    # Check if directory matches gitignore (relative to repo_root)
+                    rel_dir_path = (dirpath_path / d).relative_to(repo_root)
+                    if gitignore_spec.match_file(str(rel_dir_path)):
+                        continue
+                
+                filtered_subdirs.append(d)
+            
+            subdirectories[:] = filtered_subdirs
+            
+            # Yield files that are not skipped
             for fname in filenames:
-                yield Path(dirpath) / fname
+                file_path = dirpath_path / fname
+                
+                # Skip if matches gitignore pattern
+                if gitignore_spec:
+                    rel_file_path = file_path.relative_to(repo_root)
+                    if gitignore_spec.match_file(str(rel_file_path)):
+                        continue
+                
+                yield file_path
+        
     except OSError as e:
         logger.error("walk_the_repo() error walking the repository: %s", e)
         raise # re-raise the exception to be handled by the caller
@@ -545,6 +588,8 @@ def summarize_repo_contents(
     repo_root: Path,
     output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+    skip_dirs: list[str] = [],
+    respect_gitignore: bool = True,
 ) -> SummaryResponse:
     """Summarize the contents of the repository.
 
@@ -556,14 +601,15 @@ def summarize_repo_contents(
         output_file: Path to the output file where the summary will be written.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
-
+        skip_dirs: List of directories to skip.
+        respect_gitignore: Whether to respect .gitignore files.
     Returns:
         A SummaryResponse object containing the repository summary and scan status.
     """
     logger.debug("summarize_repo_contents(): start")
 
     try:
-        _, summary = do_the_repo_scan(repo_root)
+        _, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
         write_summary_to_file(summary=summary, output_file=output_file, output_file_format=output_file_format)
     except (OSError, ValueError, ValidationError) as e:
         logger.error("summarize_repo_contents(): error summarizing repository or writing file: %s", e)
