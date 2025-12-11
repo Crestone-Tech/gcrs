@@ -297,7 +297,6 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
 
     return "\n".join(markdown_lines)
 
-
 def write_summary_to_file(
     summary: RepositorySummary,
     output_file: Path,
@@ -316,9 +315,9 @@ def write_summary_to_file(
     """
     logger.debug("write_summary_to_file(): writing summary to file: %s", output_file)
     with open(output_file, "w", encoding="utf-8") as f:
-        json_str = summary.model_dump_json(indent=2)
+        json_data = summary.model_dump_json(indent=2)
         if output_file_format == OUTPUT_FORMAT_JSON:
-            f.write(json_str)
+            f.write(json_data)
         elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_summary_as_markdown(summary))
         else:
@@ -404,8 +403,9 @@ def write_file_records_to_file(
     logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
     with open(output_file, "w", encoding="utf-8") as f:
         if output_file_format == OUTPUT_FORMAT_JSON:
-            file_records_dict = [record.model_dump() for record in file_records]
-            json.dump(file_records_dict, f, indent=2)
+            file_records = [record.model_dump() for record in file_records]
+            json_data = json.dumps(file_records, indent=2)
+            f.write(json_data)
         elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_file_records_as_markdown(file_records))
         else:

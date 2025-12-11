@@ -76,7 +76,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     try:
         output_dir = params.repo_root / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / generate_output_filename(repo_root=str(params.repo_root.name), operation="scan", output_file_format=params.output_file_format)
+        output_file = output_dir / generate_output_filename(repo_name=params.repo_root.name, operation="scan", output_file_format=params.output_file_format)
 
         # scan the repository
         scan_response = scanner.scan_repository(
@@ -100,7 +100,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
             detail={
                 "status": "error",
                 "error": f"An unexpected error occurred: {str(e)}",
-                "repo_root": params.repo_root,
+                "repo_root": str(params.repo_root),
             },
         )
 
@@ -134,7 +134,7 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
         # validate the repository root directory before proceeding
         output_dir = params.repo_root / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
-        output_file = output_dir / generate_output_filename(repo_root=str(params.repo_root.name), operation="summary", output_file_format=params.output_file_format)
+        output_file = output_dir / generate_output_filename(repo_name=params.repo_root.name, operation="summary", output_file_format=params.output_file_format)
 
         # summarize the repository content
         summary_response = scanner.summarize_repo_contents(
@@ -158,6 +158,6 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
             detail={
                 "status": "error",
                 "error": f"An unexpected error occurred: {str(e)}",
-                "repo_root": params.repo_root,
+                "repo_root": str(params.repo_root),
             },
         )
