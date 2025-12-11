@@ -567,8 +567,6 @@ def scan_repository(
     """
     logger.debug("scan_repository(): start")
 
-    logger.debug("scan_repository() respect_gitignore param: %s", respect_gitignore) # TODO: remove this debug log
-
     try:
         file_records, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
         write_file_records_to_file(file_records=file_records, output_file=output_file, output_file_format=output_file_format)
