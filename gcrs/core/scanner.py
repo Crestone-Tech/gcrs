@@ -238,20 +238,23 @@ def is_data_ext(ext: str) -> bool:
     return ext in DATA_TYPES_BY_EXTENSION
 
 
-def walk_the_repo(repo_root: Path) -> Iterable[Path]:
+def walk_the_repo(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore: bool = True) -> Iterable[Path]:
     """Walk the repository and yield all files that are not in the skip directories.
 
     Args:
         repo_root: Path to the root of the repository.
-
+        skip_dirs: List of directories to skip.
+        respect_gitignore: Whether to respect .gitignore files.
     Yields:
         Path objects for all files in the repository.
     """
     logger.debug("walk_the_repo() is walking the repository starting at repo_root: %s", repo_root)
     try:
+        merged_skip_dirs = SKIP_DIRS.union(frozenset(skip_dirs))   # convert the list to a set and merge it with the default skip directories
+        logger.debug("walk_the_repo() merged_skip_dirs: %s", merged_skip_dirs)
         for dirpath, subdirectories, filenames in os.walk(repo_root):
             subdirectories[:] = [
-                d for d in subdirectories if d not in SKIP_DIRS
+                d for d in subdirectories if d not in merged_skip_dirs
             ]  # TODO: skip what's in .gitignore
             for fname in filenames:
                 yield Path(dirpath) / fname
@@ -415,7 +418,7 @@ def write_file_records_to_file(
 
 ######## HELPER METHODS ########
 
-def do_the_repo_scan(repo_root: Path) -> tuple[list[FileRecord], RepositorySummary]:
+def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore: bool = True) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
     Args:
@@ -425,8 +428,10 @@ def do_the_repo_scan(repo_root: Path) -> tuple[list[FileRecord], RepositorySumma
         A tuple containing a list of FileRecord objects for all files in the repository and a summary of the repository contents.
     """
     logger.debug("do_the_repo_scan(): start")
+    logger.debug("do_the_repo_scan() respect_gitignore param: %s", respect_gitignore)
+
     file_records: list[FileRecord] = []
-    filenames = walk_the_repo(repo_root)
+    filenames = walk_the_repo(repo_root, skip_dirs, respect_gitignore)
     total_files = 0
     files_without_extension = 0
     files_with_extension = 0
@@ -510,14 +515,19 @@ def scan_repository(
     repo_root: Path,
     output_file: Path,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+    skip_dirs: list[str] = [],
+    respect_gitignore: bool = True,
 ) -> ScanResponse:
     """Scan the repo, write file information to the output file.
 
     Scans the repository, writes file information to the output file.
     """
     logger.debug("scan_repository(): start")
+
+    logger.debug("scan_repository() respect_gitignore param: %s", respect_gitignore) # TODO: remove this debug log
+
     try:
-        file_records, summary = do_the_repo_scan(repo_root)
+        file_records, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
         write_file_records_to_file(file_records=file_records, output_file=output_file, output_file_format=output_file_format)
     except (OSError, ValueError, ValidationError) as e:
         logger.error("scan_repository(): error scanning repository or writing file: %s", e)

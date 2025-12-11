@@ -74,6 +74,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", params.repo_root)
 
     try:
+        # create the output directory if it doesn't exist, and generate the output filename
         output_dir = params.repo_root / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
         output_file = output_dir / generate_output_filename(repo_name=params.repo_root.name, operation="scan", output_file_format=params.output_file_format)
@@ -83,6 +84,8 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
             repo_root=params.repo_root,
             output_file=output_file,
             output_file_format=params.output_file_format,
+            skip_dirs=params.skip_dirs,
+            respect_gitignore=params.respect_gitignore,
         )
         logger.debug(
             "method: scan_repository() finished scanning repository, status: %s",
