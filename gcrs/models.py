@@ -10,6 +10,11 @@ from gcrs.constants import OUTPUT_FORMAT_JSON, OutputFormat
 class FileRecord(BaseModel):
     """Represents a file record with metadata about a file in a repository."""
 
+    # Required identity fields
+    name: str = Field(
+        description="Filename (e.g., 'scanner.py')",
+        json_schema_extra={"example": "scanner.py"},
+    )
     relative_dir: str = Field(
         description="Directory path relative to repository root (e.g., 'src/utils')",
         json_schema_extra={"example": "src/utils"},
@@ -18,10 +23,18 @@ class FileRecord(BaseModel):
         description="Absolute filename (e.g., '/path/to/repository/src/utils/scanner.py')",
         json_schema_extra={"example": "C:\\absolute\\path\\to\\sample_repo\\src\\utils\\scanner.py"},
     )
-    name: str = Field(
-        description="Filename (e.g., 'scanner.py')",
-        json_schema_extra={"example": "scanner.py"},
+    
+    # Required metadata
+    size_bytes: int = Field(
+        description="File size in bytes",
+        json_schema_extra={"example": 1024},
     )
+    is_binary: bool = Field(
+        description="Boolean, True if the file is binary, False otherwise",
+        json_schema_extra={"example": False},
+    )
+    
+    # Optional classification fields
     extension: str | None = Field(
         default=None,
         description="File extension in lowercase (e.g., '.py', '.js')",
@@ -37,11 +50,6 @@ class FileRecord(BaseModel):
         description="Programming language detected (e.g., 'python', 'javascript')",
         json_schema_extra={"examples": ["python", "javascript"]},
     )
-    technologies: list[str] = Field(
-        default_factory=list,
-        description="List of technologies detected (e.g., ['docker', 'kubernetes'])",
-        json_schema_extra={"examples": ["docker", "kubernetes", "terraform", "ansible"]},
-    )
     data_type: str | None = Field(
         default=None,
         description="Data file type (e.g., 'csv', 'jsonl', 'xml', 'tsv', 'parquet', 'sqlite')",
@@ -52,13 +60,10 @@ class FileRecord(BaseModel):
         description="Dependency management system type (e.g., 'python-requirements', 'node-package')",
         json_schema_extra={"examples": ["python-requirements", "node-package"]},
     )
-    size_bytes: int = Field(
-        description="File size in bytes",
-        json_schema_extra={"example": 1024},
-    )
-    is_binary: bool = Field(
-        description="Boolean, True if the file is binary, False otherwise",
-        json_schema_extra={"example": False},
+    technologies: list[str] = Field(
+        default_factory=list,
+        description="List of technologies detected (e.g., ['docker', 'kubernetes'])",
+        json_schema_extra={"examples": ["docker", "kubernetes", "terraform", "ansible"]},
     )
 
 class ScanOptions(BaseModel):
