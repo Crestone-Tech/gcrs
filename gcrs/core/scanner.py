@@ -9,8 +9,10 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from collections import Counter
 from collections.abc import Iterable
+from datetime import datetime
 from pathlib import Path
 from pathspec import GitIgnoreSpec
 from pydantic import ValidationError
@@ -477,8 +479,9 @@ def write_file_records_to_file(
     logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
     with open(output_file, "w", encoding="utf-8") as f:
         if output_file_format == OUTPUT_FORMAT_JSON:
-            file_records = [record.model_dump() for record in file_records]
-            json_data = json.dumps(file_records, indent=2)
+            # Use model_dump with mode='json' to serialize datetime objects to ISO format strings
+            file_records_dict = [record.model_dump(mode='json') for record in file_records]
+            json_data = json.dumps(file_records_dict, indent=2)
             f.write(json_data)
         elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_file_records_as_markdown(file_records))
@@ -492,6 +495,76 @@ def write_file_records_to_file(
 
 
 ######## HELPER METHODS ########
+
+def get_git_commit_info(file_path: Path, repo_root: Path) -> tuple[datetime | None, str | None]:
+    """Get the most recent commit date and hash for a file from Git.
+    
+    Args:
+        file_path: Absolute path to the file.
+        repo_root: Root of the Git repository.
+        
+    Returns:
+        A tuple of (commit_date, commit_hash). Both are None if Git is not available,
+        the file is not tracked, or an error occurs.
+    """
+    try:
+        # Get relative path from repo root
+        try:
+            rel_path = file_path.relative_to(repo_root)
+        except ValueError:
+            # File is not under repo_root
+            return None, None
+        
+        # Check if we're in a Git repository
+        git_dir = repo_root / ".git"
+        if not git_dir.exists():
+            return None, None
+        
+        # Run git log to get the most recent commit
+        # Format: %H (full hash) %ai (author date, ISO 8601-like format)
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%H %ai", "--", str(rel_path)],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=1,  # Timeout after 1 second (should complete in milliseconds)
+        )
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            # File is not tracked in Git or has no commits
+            return None, None
+        
+        # Parse output: "hash YYYY-MM-DD HH:MM:SS +TZ"
+        parts = result.stdout.strip().split(" ", 2)
+        if len(parts) < 2:
+            return None, None
+        
+        commit_hash = parts[0]
+        # Parse datetime (format: "2025-01-01 12:00:00 +0000")
+        try:
+            # Remove timezone info for parsing (we'll keep it as naive datetime)
+            date_str = " ".join(parts[1:])
+            # Remove timezone offset if present
+            if "+" in date_str or date_str.count("-") > 2:
+                date_str = date_str.rsplit(" ", 1)[0]
+            commit_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            logger.warning("get_git_commit_info() failed to parse date: %s", date_str)
+            return None, None
+        
+        return commit_date, commit_hash
+        
+    except subprocess.TimeoutExpired:
+        logger.warning("get_git_commit_info() timeout getting commit info for: %s", file_path)
+        return None, None
+    except FileNotFoundError:
+        # Git is not installed
+        logger.debug("get_git_commit_info() Git not found")
+        return None, None
+    except Exception as e:
+        logger.warning("get_git_commit_info() error getting commit info for %s: %s", file_path, e)
+        return None, None
+
 
 def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore: bool = True) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
@@ -533,6 +606,10 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
         dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
         size_bytes = filename.stat().st_size
         is_binary = is_binary_ext(extension)
+        
+        # Get Git commit information
+        commit_date, commit_hash = get_git_commit_info(filename, repo_root)
+        
         new_file_record = FileRecord(
             relative_dir=relative_dir,
             absolute_filename=absolute_filename,
@@ -544,7 +621,9 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
             # technologies=technology,  # TODO: add technologies to the file record
             dependency_kind=dependency_kind,
             size_bytes=size_bytes,
-            is_binary=is_binary
+            is_binary=is_binary,
+            most_recent_commit_date=commit_date,
+            most_recent_commit_hash=commit_hash,
         )
         file_records.append(new_file_record)
 

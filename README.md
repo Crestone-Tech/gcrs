@@ -6,6 +6,7 @@ Green Cloud Repository Scanner - scans a repository and generates a bill of mate
 ### Prerequisites
 - Python 3.11 or higher
 - pip
+- Git (optional, but recommended for commit information in scan results)
 
 ### Installation
 
@@ -352,3 +353,159 @@ The summary includes:
 - Number of binary files by extension
 - Number of data files by extension
 - Counts of files with and without extensions
+
+## API Documentation: Repository Scans
+
+The `/scan` endpoint scans a repository directory and generates detailed file records (Bill of Materials) for each file. The scan can be output in JSON, Markdown, CSV, or SARIF format.
+
+### Endpoint Details
+
+**URL:** `POST /scan`
+
+**Request Body Parameters:**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `repo_root` | string | No | `"."` | Path to the repository root directory to scan |
+| `output_file_format` | string | No | `"json"` | Format of the output file: `"json"`, `"markdown"`, `"csv"`, or `"sarif"` |
+| `skip_dirs` | array | No | `[]` | List of directories to skip during scanning |
+| `respect_gitignore` | boolean | No | `true` | Whether to respect .gitignore files during scanning |
+
+### FileRecord Structure
+
+Each file in the scan output is represented as a `FileRecord` object with the following fields:
+
+#### Required Identity Fields
+- `name` (string): Filename (e.g., 'scanner.py')
+- `relative_dir` (string): Directory path relative to repository root (e.g., 'src/utils')
+- `absolute_filename` (string): Absolute filename path
+
+#### Required Metadata Fields
+- `most_recent_commit_date` (datetime | null): Date and time of the most recent Git commit that changed the file. ISO 8601 format when serialized to JSON (e.g., "2025-01-15T14:30:00"). `null` if the file is not tracked in Git or Git is unavailable.
+- `most_recent_commit_hash` (string | null): SHA-1 hash of the most recent Git commit that changed the file (e.g., "a1b2c3d4e5f6789012345678901234567890abcd"). `null` if the file is not tracked in Git or Git is unavailable.
+- `size_bytes` (integer): File size in bytes
+- `is_binary` (boolean): `true` if the file is binary, `false` otherwise
+
+#### Optional Classification Fields
+- `extension` (string | null): File extension in lowercase (e.g., '.py', '.js')
+- `category` (string | null): File category (e.g., 'code', 'config', 'documentation', 'data')
+- `language` (string | null): Programming language detected (e.g., 'python', 'javascript')
+- `data_type` (string | null): Data file type (e.g., 'csv', 'jsonl', 'xml', 'tsv', 'parquet', 'sqlite')
+- `dependency_kind` (string | null): Dependency management system type (e.g., 'python-requirements', 'node-package')
+- `technologies` (array): List of technologies detected (e.g., ['docker', 'kubernetes'])
+
+### Git Commit Information
+
+The scanner automatically retrieves Git commit information for files when:
+- The repository is a Git repository (contains a `.git` directory)
+- Git is installed and available in the system PATH
+- The file is tracked in Git
+
+**Note:** If Git is not available, the file is not tracked, or the repository is not a Git repository, both `most_recent_commit_date` and `most_recent_commit_hash` will be `null`. The scanner gracefully handles these cases without errors.
+
+### Request Examples
+
+#### Using curl
+
+**Basic scan with JSON output:**
+```bash
+curl -X POST "http://127.0.0.1:8000/scan" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repo_root": "/path/to/repository",
+    "output_file_format": "json"
+  }'
+```
+
+**Scan with CSV output:**
+```bash
+curl -X POST "http://127.0.0.1:8000/scan" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repo_root": "/path/to/repository",
+    "output_file_format": "csv"
+  }'
+```
+
+### Response Format
+
+The endpoint returns a JSON response with the following structure:
+
+```json
+{
+  "status": "success",
+  "error": null
+}
+```
+
+The actual file records are written to an output file (see Output Files section below).
+
+### Output Files
+
+The file records are automatically written to a file in the `output` directory relative to the repository root:
+
+- **JSON format**: Contains an array of FileRecord objects as structured JSON data
+- **Markdown format**: Contains a human-readable markdown table
+- **CSV format**: Contains comma-separated values
+- **SARIF format**: Contains SARIF-formatted JSON for static analysis tools
+
+The output file location will be: `{repo_root}/output/{repo_name}_{timestamp}.scan.{extension}`
+
+#### Example: JSON Output File
+
+For a JSON output, the generated file (e.g., `sample_repo_20241210_143022.scan.json`) would contain:
+
+```json
+[
+  {
+    "name": "scanner.py",
+    "relative_dir": "gcrs/core",
+    "absolute_filename": "/path/to/repository/gcrs/core/scanner.py",
+    "most_recent_commit_date": "2025-01-15T14:30:00",
+    "most_recent_commit_hash": "a1b2c3d4e5f6789012345678901234567890abcd",
+    "size_bytes": 2048,
+    "is_binary": false,
+    "extension": ".py",
+    "category": "code",
+    "language": "python",
+    "data_type": null,
+    "dependency_kind": null,
+    "technologies": []
+  },
+  {
+    "name": "requirements.txt",
+    "relative_dir": ".",
+    "absolute_filename": "/path/to/repository/requirements.txt",
+    "most_recent_commit_date": "2025-01-10T09:15:00",
+    "most_recent_commit_hash": "b2c3d4e5f6789012345678901234567890abcdef",
+    "size_bytes": 512,
+    "is_binary": false,
+    "extension": ".txt",
+    "category": "config",
+    "language": null,
+    "data_type": null,
+    "dependency_kind": "python-requirements",
+    "technologies": []
+  }
+]
+```
+
+**Note:** Files that are not tracked in Git or when Git is unavailable will have `most_recent_commit_date` and `most_recent_commit_hash` set to `null`:
+
+```json
+{
+  "name": "untracked_file.py",
+  "relative_dir": ".",
+  "absolute_filename": "/path/to/repository/untracked_file.py",
+  "most_recent_commit_date": null,
+  "most_recent_commit_hash": null,
+  "size_bytes": 1024,
+  "is_binary": false,
+  "extension": ".py",
+  "category": "code",
+  "language": "python",
+  "data_type": null,
+  "dependency_kind": null,
+  "technologies": []
+}
+```
