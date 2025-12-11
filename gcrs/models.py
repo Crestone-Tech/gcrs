@@ -101,7 +101,7 @@ class ScanParams(BaseModel):
         description="List of directories to skip during scanning",
         json_schema_extra={"examples": [".git", "node_modules", "venv", "__pycache__"]},
     )
-    # TODO: use respect_gitignore
+    
     respect_gitignore: bool = Field(
         default=True,
         description="Whether to respect .gitignore files during scanning",
@@ -199,7 +199,6 @@ class SummaryResponse(BaseModel):
         description="Error message if the scan operation failed (status='error')",
         json_schema_extra={"example": None},
     )
-    # TODO: consider adding the output file path to the response
 
 class ScanResponse(BaseModel):
     """Response model containing scan results for a repository."""
@@ -213,4 +212,4 @@ class ScanResponse(BaseModel):
         description="Error message if the scan operation failed (status='error')",
         json_schema_extra={"example": None},
     )
-    # TODO: Add output_file?
+    
