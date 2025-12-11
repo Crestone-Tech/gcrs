@@ -144,6 +144,8 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
             repo_root=params.repo_root,
             output_file=output_file,
             output_file_format=params.output_file_format,
+            skip_dirs=params.skip_dirs,
+            respect_gitignore=params.respect_gitignore,
         )
         logger.debug(
             "method: summarize_repo_contents() finished summarizing repository content, status: %s",
