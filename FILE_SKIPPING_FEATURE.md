@@ -20,13 +20,12 @@ The `skip_dirs` parameter allows users to specify a list of directory names that
 - **Type:** `list[str]`
 - **Default:** A sensible default list of common directories (see Default Skip Directories below)
 - **Behavior:** Directory name matching is case-insensitive by default
-- **Location:** Available in both `ScanParams` and `SummaryParams`
+- **Location:** Available in `ScanParams`
 
 **Example API Request:**
 ```json
 {
   "repo_root": ".",
-  "output_dir": "output",
   "skip_dirs": [".git", "node_modules", "venv", "__pycache__"]
 }
 ```
@@ -37,7 +36,6 @@ curl -X POST "http://localhost:8000/scan/summary" \
   -H "Content-Type: application/json" \
   -d '{
     "repo_root": ".",
-    "output_dir": "output",
     "skip_dirs": [".git", "node_modules", "venv", "__pycache__"]
   }'
 ```
@@ -46,7 +44,7 @@ curl -X POST "http://localhost:8000/scan/summary" \
 
 The scanner can automatically respect `.gitignore` files when scanning repositories.
 
-- **Parameter:** `respect_gitignore` (in `ScanParams` and `SummaryParams`)
+- **Parameter:** `respect_gitignore` (in `ScanParams`)
 - **Type:** `bool`
 - **Default:** `true`
 - **Behavior:** 
@@ -58,7 +56,6 @@ The scanner can automatically respect `.gitignore` files when scanning repositor
 ```json
 {
   "repo_root": ".",
-  "output_dir": "output",
   "respect_gitignore": true
 }
 ```
@@ -124,17 +121,15 @@ The following enhancements are planned for future releases:
 ### Basic Usage with Defaults
 ```json
 {
-  "repo_root": ".",
-  "output_dir": "output"
+  "repo_root": "."
 }
 ```
-Uses default `skip_dirs` and respects `.gitignore` files.
+Uses default `skip_dirs` and respects `.gitignore` files. Output files are automatically generated in `{repo_root}/output/`.
 
 ### Custom Skip Directories
 ```json
 {
   "repo_root": ".",
-  "output_dir": "output",
   "skip_dirs": [".git", "node_modules", "dist", "build", "coverage"]
 }
 ```
@@ -143,7 +138,6 @@ Uses default `skip_dirs` and respects `.gitignore` files.
 ```json
 {
   "repo_root": ".",
-  "output_dir": "output",
   "respect_gitignore": false
 }
 ```
@@ -152,7 +146,6 @@ Uses default `skip_dirs` and respects `.gitignore` files.
 ```json
 {
   "repo_root": ".",
-  "output_dir": "output",
   "skip_dirs": ["custom_dir", "another_dir"],
   "respect_gitignore": true
 }

@@ -68,15 +68,13 @@ The `/scan/summary` endpoint scans a repository directory and generates a compre
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `repo_root` | string | No | `"."` | Path to the repository root directory to scan |
-| `output_dir` | string | No | `"output"` | Directory relative to `repo_root` where the output file will be written |
-| `output_file` | string | No | Auto-generated | Optional filename for the summary file. If not provided, generates a default name based on repository name and timestamp |
-| `output_file_format` | string | No | `"markdown"` | Format of the output file: `"json"` or `"markdown"` |
+| `output_file_format` | string | No | `"json"` | Format of the output file: `"json"` or `"markdown"` |
 
 ### Request Examples
 
 #### Using curl
 
-**Basic request with default parameters (scans current directory, outputs markdown):**
+**Basic request with default parameters (scans current directory, outputs JSON):**
 ```bash
 curl -X POST "http://127.0.0.1:8000/scan/summary" \
   -H "Content-Type: application/json" \
@@ -89,8 +87,6 @@ curl -X POST "http://127.0.0.1:8000/scan/summary" \
   -H "Content-Type: application/json" \
   -d '{
     "repo_root": "/path/to/repository",
-    "output_dir": "output",
-    "output_file": "summary.json",
     "output_file_format": "json"
   }'
 ```
@@ -101,20 +97,7 @@ curl -X POST "http://127.0.0.1:8000/scan/summary" \
   -H "Content-Type: application/json" \
   -d '{
     "repo_root": "/path/to/repository",
-    "output_dir": "output",
-    "output_file": "summary.md",
     "output_file_format": "markdown"
-  }'
-```
-
-**Summarize repository with custom output directory:**
-```bash
-curl -X POST "http://127.0.0.1:8000/scan/summary" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "repo_root": ".",
-    "output_dir": "reports",
-    "output_file": "repo_summary.md"
   }'
 ```
 
@@ -134,8 +117,6 @@ response = requests.post(
     "http://127.0.0.1:8000/scan/summary",
     json={
         "repo_root": "/path/to/repository",
-        "output_dir": "output",
-        "output_file": "summary.json",
         "output_file_format": "json"
     }
 )
@@ -145,8 +126,6 @@ response = requests.post(
     "http://127.0.0.1:8000/scan/summary",
     json={
         "repo_root": "/path/to/repository",
-        "output_dir": "output",
-        "output_file": "summary.md",
         "output_file_format": "markdown"
     }
 )
@@ -176,8 +155,6 @@ const response = await fetch('http://127.0.0.1:8000/scan/summary', {
   },
   body: JSON.stringify({
     repo_root: '/path/to/repository',
-    output_dir: 'output',
-    output_file: 'summary.json',
     output_file_format: 'json'
   })
 });
@@ -244,16 +221,22 @@ The endpoint returns a JSON response with the following structure:
 
 ### Output Files
 
-The summary is written to a file in the specified `output_dir` directory:
+The summary is automatically written to a file in the `output` directory relative to the repository root:
 
 - **JSON format**: Contains the repository summary as structured JSON data
 - **Markdown format**: Contains a human-readable markdown table with the same information
 
-The output file location will be: `{repo_root}/{output_dir}/{output_file}`
+The output file location will be: `{repo_root}/output/{repo_name}_{timestamp}.summary.{extension}`
+
+The filename is automatically generated based on:
+- Repository name (from `repo_root` path)
+- Timestamp (YYYYMMDD_HHMMSS format)
+- Operation type (`summary` or `scan`)
+- File extension (based on `output_file_format`)
 
 #### Example: JSON Output File
 
-For the JSON example above, the output file `summary.json` would contain:
+For a JSON output, the generated file (e.g., `sample_repo_20241210_143022.summary.json`) would contain:
 
 ```json
 {
@@ -300,7 +283,7 @@ For the JSON example above, the output file `summary.json` would contain:
 
 #### Example: Markdown Output File
 
-For the same repository, when using `"output_file_format": "markdown"`, the output file `summary.md` would contain:
+For a Markdown output, the generated file (e.g., `sample_repo_20241210_143022.summary.md`) would contain:
 
 ```markdown
 # Repository Summary
