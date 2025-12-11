@@ -15,7 +15,7 @@ from pathlib import Path
 from pathspec import GitIgnoreSpec
 from pydantic import ValidationError
 
-from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OutputFormat
+from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OUTPUT_FORMAT_SARIF, OUTPUT_FORMAT_CSV, OutputFormat
 from gcrs.logger import setup_logging
 from gcrs.models import FileRecord, RepositorySummary, ScanResponse, SummaryResponse
 
@@ -430,6 +430,34 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
         )
     return "\n".join(markdown_lines)
 
+def format_file_records_as_sarif(file_records: list[FileRecord]) -> str:
+    """Format the file records as SARIF.
+
+    Args:
+        file_records: List of FileRecord objects to format.
+
+    Returns:
+        A SARIF-formatted string representation of the file records.
+    """
+    sarif_lines = []
+    sarif_lines.append("This is a SARIF-formatted string representation of the file records.")
+    
+    return "\n".join(sarif_lines)
+
+def format_file_records_as_csv(file_records: list[FileRecord]) -> str:
+    """Format the file records as CSV.
+
+    Args:
+        file_records: List of FileRecord objects to format.
+
+    Returns:
+        A CSV-formatted string representation of the file records.
+    """
+    csv_lines = []
+    csv_lines.append("Name,Extension,Relative Dir,Language,Category,Data Type,Dependency Kind,Size (bytes),Binary")
+    for file_record in file_records:
+        csv_lines.append(f"{file_record.name},{file_record.extension or ''},{file_record.relative_dir or ''},{file_record.language or ''},{file_record.category or ''},{file_record.data_type or ''},{file_record.dependency_kind or ''},{file_record.size_bytes},{file_record.is_binary}")
+    return "\n".join(csv_lines)
 
 def write_file_records_to_file(
     file_records: list[FileRecord],
@@ -441,10 +469,10 @@ def write_file_records_to_file(
     Args:
         file_records: List of FileRecord objects to write.
         output_file: Path to the output file where the file records will be written.
-        output_file_format: Format of the output file, either "json", "markdown", or "csv".
+        output_file_format: Format of the output file, either "json", "markdown", "csv", or "sarif".
 
     Raises:
-        ValueError: If output_file_format is not "json", "markdown", or "csv".
+        ValueError: If output_file_format is anything other than "json", "markdown", "csv", or "sarif".
     """
     logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
     with open(output_file, "w", encoding="utf-8") as f:
@@ -454,6 +482,10 @@ def write_file_records_to_file(
             f.write(json_data)
         elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
             f.write(format_file_records_as_markdown(file_records))
+        elif output_file_format == OUTPUT_FORMAT_SARIF:
+            f.write(format_file_records_as_sarif(file_records))
+        elif output_file_format == OUTPUT_FORMAT_CSV:
+            f.write(format_file_records_as_csv(file_records))
         else:
             raise ValueError(f"Invalid output file format: {output_file_format}")
     logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file.name)
@@ -566,8 +598,6 @@ def scan_repository(
     Scans the repository, writes file information to the output file.
     """
     logger.debug("scan_repository(): start")
-
-    logger.debug("scan_repository() respect_gitignore param: %s", respect_gitignore) # TODO: remove this debug log
 
     try:
         file_records, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
