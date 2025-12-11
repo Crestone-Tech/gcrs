@@ -11,13 +11,10 @@ from fastapi.testclient import TestClient
 
 def test_summary_json_output_format(client: TestClient, sample_repo_path: Path):
     """Test that JSON output format creates a valid JSON file with correct structure."""
-    output_file = "test_summary_json.json"
     response = client.post(
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": output_file,
             "output_file_format": "json",
         },
     )
@@ -27,9 +24,11 @@ def test_summary_json_output_format(client: TestClient, sample_repo_path: Path):
     assert data["status"] == "success"
     assert "repository_summary" in data
     
-    # Verify the output file was created
-    output_path = sample_repo_path / "output" / output_file
-    assert output_path.exists(), f"Output file {output_path} was not created"
+    # Verify the output file was created (find the generated file)
+    output_dir = sample_repo_path / "output"
+    json_files = list(output_dir.glob("*.summary.json"))
+    assert len(json_files) > 0, f"No JSON output file found in {output_dir}"
+    output_path = json_files[-1]  # Get the most recent one
     
     # Verify the file contains valid JSON
     with open(output_path, "r", encoding="utf-8") as f:
@@ -54,13 +53,10 @@ def test_summary_json_output_format(client: TestClient, sample_repo_path: Path):
 
 def test_summary_markdown_output_format(client: TestClient, sample_repo_path: Path):
     """Test that Markdown output format creates a markdown file with expected content."""
-    output_file = "test_summary_markdown.md"
     response = client.post(
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": output_file,
             "output_file_format": "markdown",
         },
     )
@@ -70,9 +66,11 @@ def test_summary_markdown_output_format(client: TestClient, sample_repo_path: Pa
     assert data["status"] == "success"
     assert "repository_summary" in data
     
-    # Verify the output file was created
-    output_path = sample_repo_path / "output" / output_file
-    assert output_path.exists(), f"Output file {output_path} was not created"
+    # Verify the output file was created (find the generated file)
+    output_dir = sample_repo_path / "output"
+    md_files = list(output_dir.glob("*.summary.md"))
+    assert len(md_files) > 0, f"No Markdown output file found in {output_dir}"
+    output_path = md_files[-1]  # Get the most recent one
     
     # Verify the file contains markdown content
     with open(output_path, "r", encoding="utf-8") as f:
@@ -106,15 +104,12 @@ def test_summary_markdown_output_format(client: TestClient, sample_repo_path: Pa
 
 
 def test_summary_default_output_format(client: TestClient, sample_repo_path: Path):
-    """Test that default output format (markdown) is used when format is not specified."""
-    output_file = "test_summary_default.md"
+    """Test that default output format (json) is used when format is not specified."""
     response = client.post(
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": output_file,
-            # output_file_format not specified - should default to markdown
+            # output_file_format not specified - should default to json
         },
     )
     
@@ -122,9 +117,11 @@ def test_summary_default_output_format(client: TestClient, sample_repo_path: Pat
     data = response.json()
     assert data["status"] == "success"
     
-    # Verify the output file was created
-    output_path = sample_repo_path / "output" / output_file
-    assert output_path.exists(), f"Output file {output_path} was not created"
+    # Verify the output file was created (find the generated file)
+    output_dir = sample_repo_path / "output"
+    json_files = list(output_dir.glob("*.summary.json"))
+    assert len(json_files) > 0, f"No JSON output file found in {output_dir}"
+    output_path = json_files[-1]  # Get the most recent one
     
     # Verify the file contains content (markdown by default)
     with open(output_path, "r", encoding="utf-8") as f:
@@ -139,8 +136,6 @@ def test_summary_same_data_different_formats(client: TestClient, sample_repo_pat
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": "test_json_comparison.json",
             "output_file_format": "json",
         },
     )
@@ -149,8 +144,6 @@ def test_summary_same_data_different_formats(client: TestClient, sample_repo_pat
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": "test_markdown_comparison.md",
             "output_file_format": "markdown",
         },
     )
@@ -175,20 +168,21 @@ def test_summary_same_data_different_formats(client: TestClient, sample_repo_pat
 
 def test_summary_json_file_content_structure(client: TestClient, sample_repo_path: Path):
     """Test that JSON output file has the correct structure and data types."""
-    output_file = "test_json_structure.json"
     response = client.post(
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
-            "output_dir": "output",
-            "output_file": output_file,
             "output_file_format": "json",
         },
     )
     
     assert response.status_code == 200
     
-    output_path = sample_repo_path / "output" / output_file
+    # Find the generated output file
+    output_dir = sample_repo_path / "output"
+    json_files = list(output_dir.glob("*.summary.json"))
+    assert len(json_files) > 0, f"No JSON output file found in {output_dir}"
+    output_path = json_files[-1]  # Get the most recent one
     with open(output_path, "r", encoding="utf-8") as f:
         file_data = json.loads(f.read())
     

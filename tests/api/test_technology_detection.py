@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_scan_summary_docker_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -13,7 +13,7 @@ def test_scan_summary_docker_detection(client: TestClient, sample_repo_path: Pat
 
 
 def test_scan_summary_go_technology_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -26,7 +26,7 @@ def test_scan_summary_go_technology_detection(client: TestClient, sample_repo_pa
 
 
 def test_scan_summary_nodejs_technology_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -41,7 +41,7 @@ def test_scan_summary_nodejs_technology_detection(client: TestClient, sample_rep
 
 
 def test_scan_summary_python_technology_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -57,7 +57,7 @@ def test_scan_summary_python_technology_detection(client: TestClient, sample_rep
 
 
 def test_scan_summary_maven_technology_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -69,7 +69,7 @@ def test_scan_summary_maven_technology_detection(client: TestClient, sample_repo
 
 
 def test_scan_summary_gradle_technology_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_dir": "output", "output_file": "summary.json", "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
