@@ -93,8 +93,8 @@ class ScanParams(BaseModel):
     )
     output_file_format: OutputFormat = Field(
         default=OUTPUT_FORMAT_JSON,
-        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown and csv. Markdown and csv output tables.",
-        json_schema_extra={"examples": ["json", "markdown", "csv"]},
+        description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown, csv, and sarif. Markdown and csv output tables, sarif output is a JSON file that can be used for static analysis.",
+        json_schema_extra={"examples": ["json", "markdown", "csv", "sarif"]},
     )
     skip_dirs: list[str] = Field(
         default_factory=list,
