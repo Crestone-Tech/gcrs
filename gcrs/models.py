@@ -2,6 +2,7 @@
 
 from typing import Literal
 from pathlib import Path
+from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -25,6 +26,17 @@ class FileRecord(BaseModel):
     )
     
     # Required metadata
+    most_recent_commit_date: datetime | None = Field(
+        default=None,
+        description="Date and time of the most recent commit that changed the file",
+        json_schema_extra={"example": "2025-01-01 12:00:00"},
+    )
+    most_recent_commit_hash: str | None = Field(
+        default=None,
+        description="SHA-1 hash of the most recent commit that changed the file",
+        json_schema_extra={"example": "a1b2c3d4e5f6789012345678901234567890abcd"},
+    )
+
     size_bytes: int = Field(
         description="File size in bytes",
         json_schema_extra={"example": 1024},
