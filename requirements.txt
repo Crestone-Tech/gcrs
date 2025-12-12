@@ -1,1 +1,2 @@
 requests==2.32.3
+sarif-pydantic>=1.0.0

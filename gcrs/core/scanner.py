@@ -16,6 +16,18 @@ from datetime import datetime
 from pathlib import Path
 from pathspec import GitIgnoreSpec
 from pydantic import ValidationError
+from sarif_pydantic import (
+    ArtifactLocation,
+    Level,
+    Location,
+    Message,
+    PhysicalLocation,
+    Result,
+    Run,
+    Sarif,
+    Tool,
+    ToolDriver,
+)
 
 from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OUTPUT_FORMAT_SARIF, OUTPUT_FORMAT_CSV, OutputFormat
 from gcrs.logger import setup_logging
@@ -433,18 +445,102 @@ def format_file_records_as_markdown(file_records: list[FileRecord]) -> str:
     return "\n".join(markdown_lines)
 
 def format_file_records_as_sarif(file_records: list[FileRecord]) -> str:
-    """Format the file records as SARIF.
+    """Format the file records as SARIF 2.1.0 format using sarif-pydantic.
 
     Args:
         file_records: List of FileRecord objects to format.
 
     Returns:
-        A SARIF-formatted string representation of the file records.
+        A SARIF-formatted JSON string representation of the file records.
     """
-    sarif_lines = []
-    sarif_lines.append("This is a SARIF-formatted string representation of the file records.")
+    # Create tool driver
+    tool_driver = ToolDriver(
+        name="GCRS",
+    )
     
-    return "\n".join(sarif_lines)
+    # Create tool with the driver
+    tool = Tool(driver=tool_driver)
+    
+    # Convert each FileRecord to a SARIF result
+    results = []
+    for record in file_records:
+        # Determine ruleId (use category, fallback to "file")
+        rule_id = record.category if record.category else "file"
+        
+        # Build message text with key metadata
+        message_parts = [f"File: {record.name}"]
+        if record.language:
+            message_parts.append(f"Language: {record.language}")
+        if record.category:
+            message_parts.append(f"Category: {record.category}")
+        if record.size_bytes:
+            message_parts.append(f"Size: {record.size_bytes} bytes")
+        message_text = " | ".join(message_parts)
+        
+        # Convert absolute filename to URI format (forward slashes)
+        file_uri = record.absolute_filename.replace("\\", "/")
+        
+        # Build properties with all metadata
+        properties = {}
+        if record.most_recent_commit_hash:
+            properties["gitCommit"] = record.most_recent_commit_hash
+        if record.most_recent_commit_date:
+            # Format datetime as ISO 8601 string
+            properties["gitDate"] = record.most_recent_commit_date.isoformat()
+        if record.language:
+            properties["language"] = record.language
+        if record.category:
+            properties["category"] = record.category
+        if record.extension:
+            properties["extension"] = record.extension
+        properties["sizeBytes"] = record.size_bytes
+        properties["isBinary"] = record.is_binary
+        if record.technologies:
+            properties["technologies"] = record.technologies
+        if record.dependency_kind:
+            properties["dependencyKind"] = record.dependency_kind
+        if record.data_type:
+            properties["dataType"] = record.data_type
+        
+        # Create physical location
+        physical_location = PhysicalLocation(
+            artifact_location=ArtifactLocation(
+                uri=file_uri,
+            ),
+        )
+        
+        # Create location
+        location = Location(
+            physical_location=physical_location,
+        )
+        
+        # Create SARIF result
+        # Build result data with properties if available
+        # Use model_validate to allow properties field
+        result_dict = {
+            "ruleId": rule_id,
+            "level": Level.NOTE,
+            "message": {"text": message_text},
+            "locations": [location.model_dump()],
+        }
+        if properties:
+            result_dict["properties"] = properties
+        
+        result = Result.model_validate(result_dict)
+        
+        results.append(result)
+    
+    # Create SARIF log
+    sarif_log = Sarif(
+        version="2.1.0",
+        runs=[Run(
+            tool=tool,
+            results=results,
+        )],
+    )
+    
+    # Export to JSON string with indentation
+    return sarif_log.model_dump_json(indent=2, exclude_none=True)
 
 def format_file_records_as_csv(file_records: list[FileRecord]) -> str:
     """Format the file records as CSV.
