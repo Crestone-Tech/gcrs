@@ -12,18 +12,26 @@ Green Cloud Repository Scanner - scans a repository and generates a bill of mate
 
 1. Create a virtual environment:
    
+   ```bash
    python -m venv .venv
+   ```
    
 2. Activate the virtual environment:
    
    **On Windows (Git Bash):**
+   ```bash
    source .venv/Scripts/activate
+   ```
       
    **On Windows (CMD):**
-   
+   ```cmd
    .venv\Scripts\activate.bat
-      **On Linux/Mac:**h
+   ```
+   
+   **On Linux/Mac:**
+   ```bash
    source .venv/bin/activate
+   ```
 3. Install the package and dependencies:
   
    ```bash
@@ -265,8 +273,11 @@ gcrs summary --help
 
 2. Start the API server:
    
+   ```bash
    uvicorn gcrs.api.main:app --reload
-      The `--reload` flag enables auto-reload during development.
+   ```
+   
+   The `--reload` flag enables auto-reload during development.
 
 3. The API will be available at:
    - **API Root:** http://127.0.0.1:8000/
@@ -277,7 +288,12 @@ gcrs summary --help
 ### Verifying the Virtual Environment
 
 To confirm you're using the virtual environment, check:
-which uvicornThis should show a path containing `.venv` or `venv` (e.g., `/path/to/gcrs/.venv/Scripts/uvicorn`).
+
+```bash
+which uvicorn
+```
+
+This should show a path containing `.venv` or `venv` (e.g., `/path/to/gcrs/.venv/Scripts/uvicorn`).
 
 ## API Endpoints
 
