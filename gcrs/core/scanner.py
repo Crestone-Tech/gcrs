@@ -357,32 +357,152 @@ def format_summary_as_markdown(summary: RepositorySummary) -> str:
 
     return "\n".join(markdown_lines)
 
+
+def format_summary_as_json(summary: RepositorySummary) -> str:
+    """Format the summary as JSON.
+
+    Args:
+        summary: RepositorySummary object containing repository statistics.
+
+    Returns:
+        A JSON-formatted string representation of the repository summary.
+    """
+    return summary.model_dump_json(indent=2)
+
+
+def format_summary_as_csv(summary: RepositorySummary) -> str:
+    """Format the summary as CSV.
+
+    Args:
+        summary: RepositorySummary object containing repository statistics.
+
+    Returns:
+        A CSV-formatted string representation of the repository summary.
+    """
+    csv_lines = []
+    csv_lines.append("Metric,Value")
+    csv_lines.append(f"Total Files,{summary.total_files}")
+    csv_lines.append(f"Scanned Files,{summary.scanned_files}")
+    csv_lines.append(f"Skipped Files,{summary.skipped_files}")
+    csv_lines.append(f"Files without Extension,{summary.files_without_extension}")
+    csv_lines.append(f"Files with Extension,{summary.files_with_extension}")
+    
+    csv_lines.append("")
+    csv_lines.append("Language,Count")
+    for language, count in summary.files_by_language.items():
+        csv_lines.append(f"{language},{count}")
+    
+    csv_lines.append("")
+    csv_lines.append("Category,Count")
+    for category, count in summary.files_by_category.items():
+        csv_lines.append(f"{category},{count}")
+    
+    csv_lines.append("")
+    csv_lines.append("Technology,Count")
+    for technology, count in summary.files_by_technology.items():
+        csv_lines.append(f"{technology},{count}")
+    
+    csv_lines.append("")
+    csv_lines.append("Dependency,Count")
+    for dependency, count in summary.files_by_dependency.items():
+        csv_lines.append(f"{dependency},{count}")
+    
+    csv_lines.append("")
+    csv_lines.append("Extension,Count")
+    for extension, count in summary.files_by_extension.items():
+        csv_lines.append(f"{extension},{count}")
+    
+    csv_lines.append("")
+    csv_lines.append("Binary Extension,Count")
+    for extension, count in summary.binary_files_by_extension.items():
+        csv_lines.append(f"{extension},{count}")
+    
+    return "\n".join(csv_lines)
+
+
+def format_summary(summary: RepositorySummary, output_format: OutputFormat) -> str:
+    """Format the summary in the specified format.
+
+    Args:
+        summary: RepositorySummary object containing repository statistics.
+        output_format: Format to use ("json", "markdown", or "csv").
+
+    Returns:
+        A formatted string representation of the repository summary.
+
+    Raises:
+        ValueError: If output_format is not supported.
+    """
+    if output_format == OUTPUT_FORMAT_JSON:
+        return format_summary_as_json(summary)
+    elif output_format == OUTPUT_FORMAT_MARKDOWN:
+        return format_summary_as_markdown(summary)
+    elif output_format == OUTPUT_FORMAT_CSV:
+        return format_summary_as_csv(summary)
+    else:
+        raise ValueError(f"Invalid output format: {output_format}")
+
+
+def format_file_records(file_records: list[FileRecord], output_format: OutputFormat) -> str:
+    """Format the file records in the specified format.
+
+    Args:
+        file_records: List of FileRecord objects to format.
+        output_format: Format to use ("json", "markdown", "csv", or "sarif").
+
+    Returns:
+        A formatted string representation of the file records.
+
+    Raises:
+        ValueError: If output_format is not supported.
+    """
+    if output_format == OUTPUT_FORMAT_JSON:
+        file_records_dict = [record.model_dump(mode='json') for record in file_records]
+        return json.dumps(file_records_dict, indent=2)
+    elif output_format == OUTPUT_FORMAT_MARKDOWN:
+        return format_file_records_as_markdown(file_records)
+    elif output_format == OUTPUT_FORMAT_SARIF:
+        return format_file_records_as_sarif(file_records)
+    elif output_format == OUTPUT_FORMAT_CSV:
+        return format_file_records_as_csv(file_records)
+    else:
+        raise ValueError(f"Invalid output format: {output_format}")
+
 def write_summary_to_file(
     summary: RepositorySummary,
-    output_file: Path,
+    output_file: Path | None = None,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+    output_stream: object | None = None,
 ) -> None:
-    """Write the summary to a file.
+    """Write the summary to a file or stream.
 
     Args:
         summary: RepositorySummary object containing repository statistics.
         output_file: Path to the output file where the summary will be written.
+            If None and output_stream is provided, writes to the stream instead.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
+        output_stream: Optional file-like object to write to (e.g., sys.stdout).
+            If provided, output_file is ignored.
 
     Raises:
-        ValueError: If output_file_format is not "json", "markdown", or "csv".
+        ValueError: If output_file_format is not "json", "markdown", or "csv", or if
+            neither output_file nor output_stream is provided.
     """
-    logger.debug("write_summary_to_file(): writing summary to file: %s", output_file)
-    with open(output_file, "w", encoding="utf-8") as f:
-        json_data = summary.model_dump_json(indent=2)
-        if output_file_format == OUTPUT_FORMAT_JSON:
-            f.write(json_data)
-        elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
-            f.write(format_summary_as_markdown(summary))
-        else:
-            raise ValueError(f"Invalid output file format: {output_file_format}")
-    logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file.name)
+    formatted_output = format_summary(summary, output_file_format)
+    
+    if output_stream is not None:
+        logger.debug("write_summary_to_file(): writing summary to stream")
+        output_stream.write(formatted_output)
+        if hasattr(output_stream, 'flush'):
+            output_stream.flush()
+    elif output_file is not None:
+        logger.debug("write_summary_to_file(): writing summary to file: %s", output_file)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(formatted_output)
+        logger.debug("write_summary_to_file(): finished writing summary to file: %s", output_file.name)
+    else:
+        raise ValueError("Either output_file or output_stream must be provided")
 
 
 def escape_markdown_table_cells(cell: str) -> str:
@@ -559,35 +679,38 @@ def format_file_records_as_csv(file_records: list[FileRecord]) -> str:
 
 def write_file_records_to_file(
     file_records: list[FileRecord],
-    output_file: Path,
+    output_file: Path | None = None,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+    output_stream: object | None = None,
 ) -> None:
-    """Write the file records to a file.
+    """Write the file records to a file or stream.
 
     Args:
         file_records: List of FileRecord objects to write.
         output_file: Path to the output file where the file records will be written.
+            If None and output_stream is provided, writes to the stream instead.
         output_file_format: Format of the output file, either "json", "markdown", "csv", or "sarif".
+        output_stream: Optional file-like object to write to (e.g., sys.stdout).
+            If provided, output_file is ignored.
 
     Raises:
-        ValueError: If output_file_format is anything other than "json", "markdown", "csv", or "sarif".
+        ValueError: If output_file_format is anything other than "json", "markdown", "csv", or "sarif", or if
+            neither output_file nor output_stream is provided.
     """
-    logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
-    with open(output_file, "w", encoding="utf-8") as f:
-        if output_file_format == OUTPUT_FORMAT_JSON:
-            # Use model_dump with mode='json' to serialize datetime objects to ISO format strings
-            file_records_dict = [record.model_dump(mode='json') for record in file_records]
-            json_data = json.dumps(file_records_dict, indent=2)
-            f.write(json_data)
-        elif output_file_format == OUTPUT_FORMAT_MARKDOWN:
-            f.write(format_file_records_as_markdown(file_records))
-        elif output_file_format == OUTPUT_FORMAT_SARIF:
-            f.write(format_file_records_as_sarif(file_records))
-        elif output_file_format == OUTPUT_FORMAT_CSV:
-            f.write(format_file_records_as_csv(file_records))
-        else:
-            raise ValueError(f"Invalid output file format: {output_file_format}")
-    logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file.name)
+    formatted_output = format_file_records(file_records, output_file_format)
+    
+    if output_stream is not None:
+        logger.debug("write_file_records_to_file(): writing file records to stream")
+        output_stream.write(formatted_output)
+        if hasattr(output_stream, 'flush'):
+            output_stream.flush()
+    elif output_file is not None:
+        logger.debug("write_file_records_to_file(): writing file records to file: %s", output_file)
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(formatted_output)
+        logger.debug("write_file_records_to_file(): finished writing file records to file: %s", output_file.name)
+    else:
+        raise ValueError("Either output_file or output_stream must be provided")
 
 
 ######## HELPER METHODS ########
@@ -763,20 +886,38 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
 ######## ENDPOINT METHODS. That's why they are at the bottom of the file. ########
 def scan_repository(
     repo_root: Path,
-    output_file: Path,
+    output_file: Path | None = None,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
     skip_dirs: list[str] = [],
     respect_gitignore: bool = True,
+    output_stream: object | None = None,
 ) -> ScanResponse:
-    """Scan the repo, write file information to the output file.
+    """Scan the repo, write file information to the output file or stream.
 
-    Scans the repository, writes file information to the output file.
+    Scans the repository, writes file information to the output file or stream.
+    Either output_file or output_stream must be provided.
+
+    Args:
+        repo_root: Path to the root of the repository.
+        output_file: Path to the output file where the scan results will be written.
+            If None and output_stream is provided, writes to the stream instead.
+        output_file_format: Format of the output file, either "json", "markdown", "csv", or "sarif".
+            Defaults to "markdown".
+        skip_dirs: List of directories to skip.
+        respect_gitignore: Whether to respect .gitignore files.
+        output_stream: Optional file-like object to write to (e.g., sys.stdout).
+            If provided, output_file is ignored.
     """
     logger.debug("scan_repository(): start")
 
     try:
         file_records, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
-        write_file_records_to_file(file_records=file_records, output_file=output_file, output_file_format=output_file_format)
+        write_file_records_to_file(
+            file_records=file_records,
+            output_file=output_file,
+            output_file_format=output_file_format,
+            output_stream=output_stream,
+        )
     except (OSError, ValueError, ValidationError) as e:
         logger.error("scan_repository(): error scanning repository or writing file: %s", e)
         return ScanResponse(
@@ -791,23 +932,27 @@ def scan_repository(
 
 def summarize_repo_contents(
     repo_root: Path,
-    output_file: Path,
+    output_file: Path | None = None,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
     skip_dirs: list[str] = [],
     respect_gitignore: bool = True,
+    output_stream: object | None = None,
 ) -> SummaryResponse:
     """Summarize the contents of the repository.
 
     Scans the repository, generates a summary of its contents, and writes the
-    summary to the specified output file.
+    summary to the specified output file or stream. Either output_file or output_stream must be provided.
 
     Args:
         repo_root: Path to the root of the repository to scan.
         output_file: Path to the output file where the summary will be written.
+            If None and output_stream is provided, writes to the stream instead.
         output_file_format: Format of the output file, either "json", "markdown", or "csv".
             Defaults to "markdown".
         skip_dirs: List of directories to skip.
         respect_gitignore: Whether to respect .gitignore files.
+        output_stream: Optional file-like object to write to (e.g., sys.stdout).
+            If provided, output_file is ignored.
     Returns:
         A SummaryResponse object containing the repository summary and scan status.
     """
@@ -815,9 +960,21 @@ def summarize_repo_contents(
 
     try:
         _, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
-        write_summary_to_file(summary=summary, output_file=output_file, output_file_format=output_file_format)
-    except (OSError, ValueError, ValidationError) as e:
-        logger.error("summarize_repo_contents(): error summarizing repository or writing file: %s", e)
+        write_summary_to_file(
+            summary=summary,
+            output_file=output_file,
+            output_file_format=output_file_format,
+            output_stream=output_stream,
+        )
+    except (OSError) as e:
+        logger.error("summarize_repo_contents(): error writing summary to file: %s", e)
+        return SummaryResponse(
+            status="error",
+            error=str(e),
+            repository_summary=None,
+        )
+    except (ValueError, ValidationError) as e:
+        logger.error("summarize_repo_contents(): error generating summary: %s", e)
         return SummaryResponse(
             status="error",
             error=str(e),

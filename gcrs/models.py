@@ -4,7 +4,7 @@ from typing import Literal
 from pathlib import Path
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from gcrs.constants import OUTPUT_FORMAT_JSON, OutputFormat
 
@@ -207,8 +207,9 @@ class SummaryResponse(BaseModel):
         description="Status of the scan operation: 'success' or 'error'",
         json_schema_extra={"example": "success"},
     )
-    repository_summary: RepositorySummary = Field(
-        description="Summary of the repository contents",
+    repository_summary: RepositorySummary | None = Field(
+        default=None,
+        description="Summary of the repository contents (None if status is 'error')",
         #json_schema_extra={"example": RepositorySummary(self, files_by_language={"javascript": 1}, files_by_category={"code": 1}, files_by_technology={"Docker": 1}, files_by_dependency={"python-requirements": 1}, files_by_extension={".js": 1}, binary_files_by_extension={".png": 1}, files_without_extension=0, files_with_extension=1, data_files_by_extension={"csv": 1}, total_files=1, scanned_files=1, skipped_files=0)},
     )
     error: str | None = Field(
@@ -216,6 +217,24 @@ class SummaryResponse(BaseModel):
         description="Error message if the scan operation failed (status='error')",
         json_schema_extra={"example": None},
     )
+    
+    @model_validator(mode='after')
+    def validate_response_consistency(self) -> 'SummaryResponse':
+        """Ensure response data is consistent with status.
+        
+        - If status is 'success', repository_summary must be provided
+        - If status is 'error', error must be provided and repository_summary should be None
+        """
+        if self.status == "success":
+            if self.repository_summary is None:
+                raise ValueError("repository_summary is required when status is 'success'")
+            if self.error is not None:
+                raise ValueError("error should be None when status is 'success'")
+        elif self.status == "error":
+            if self.error is None:
+                raise ValueError("error is required when status is 'error'")
+            # repository_summary can be None for errors, which is fine
+        return self
 
 class ScanResponse(BaseModel):
     """Response model containing scan results for a repository."""
