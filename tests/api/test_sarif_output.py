@@ -448,3 +448,421 @@ def test_sarif_output_same_data_different_formats(client: TestClient, sample_rep
         sarif_data = json.loads(f.read())
         assert sarif_data["version"] == "2.1.0"
 
+
+def test_sarif_output_multiple_technologies():
+    """Test that SARIF output handles multiple technologies correctly."""
+    file_records = [
+        FileRecord(
+            name="docker-compose.yml",
+            relative_dir=".",
+            absolute_filename="/path/to/repo/docker-compose.yml",
+            size_bytes=1024,
+            is_binary=False,
+            technologies=["docker", "kubernetes", "terraform"],
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    assert "properties" in result
+    assert result["properties"]["technologies"] == ["docker", "kubernetes", "terraform"]
+
+
+def test_sarif_output_empty_technologies_list():
+    """Test that empty technologies list is not included in properties."""
+    file_records = [
+        FileRecord(
+            name="test.py",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/test.py",
+            size_bytes=1024,
+            is_binary=False,
+            technologies=[],  # Empty list
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    # Properties should exist but technologies should not be included
+    if "properties" in result:
+        assert "technologies" not in result["properties"]
+
+
+def test_sarif_output_message_with_zero_size():
+    """Test that message does not include size when size_bytes is 0."""
+    file_records = [
+        FileRecord(
+            name="empty.txt",
+            relative_dir=".",
+            absolute_filename="/path/to/repo/empty.txt",
+            size_bytes=0,  # Zero size
+            is_binary=False,
+            language="python",
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    message_text = result["message"]["text"]
+    
+    # Should not include "Size: 0 bytes" in message
+    assert "Size: 0 bytes" not in message_text
+    assert "File: empty.txt" in message_text
+    # But sizeBytes should still be in properties
+    if "properties" in result:
+        assert result["properties"]["sizeBytes"] == 0
+
+
+def test_sarif_output_different_data_types():
+    """Test that different data types are correctly included in properties."""
+    data_types = ["csv", "jsonl", "xml", "tsv", "parquet", "sqlite"]
+    
+    for data_type in data_types:
+        file_records = [
+            FileRecord(
+                name=f"data.{data_type}",
+                relative_dir="data",
+                absolute_filename=f"/path/to/repo/data/data.{data_type}",
+                size_bytes=1024,
+                is_binary=False,
+                data_type=data_type,
+            )
+        ]
+        
+        sarif_output = format_file_records_as_sarif(file_records)
+        sarif_data = json.loads(sarif_output)
+        
+        result = sarif_data["runs"][0]["results"][0]
+        assert "properties" in result
+        assert result["properties"]["dataType"] == data_type
+
+
+def test_sarif_output_different_dependency_kinds():
+    """Test that different dependency kinds are correctly included in properties."""
+    dependency_kinds = [
+        "python-requirements",
+        "node-package",
+        "go-mod",
+        "rust-cargo",
+        "maven-pom",
+    ]
+    
+    for dep_kind in dependency_kinds:
+        file_records = [
+            FileRecord(
+                name="dependency.file",
+                relative_dir=".",
+                absolute_filename="/path/to/repo/dependency.file",
+                size_bytes=512,
+                is_binary=False,
+                dependency_kind=dep_kind,
+            )
+        ]
+        
+        sarif_output = format_file_records_as_sarif(file_records)
+        sarif_data = json.loads(sarif_output)
+        
+        result = sarif_data["runs"][0]["results"][0]
+        assert "properties" in result
+        assert result["properties"]["dependencyKind"] == dep_kind
+
+
+def test_sarif_output_special_characters_in_filename():
+    """Test that special characters in file names are handled correctly."""
+    file_records = [
+        FileRecord(
+            name="test file with spaces.py",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/test file with spaces.py",
+            size_bytes=1024,
+            is_binary=False,
+        ),
+        FileRecord(
+            name="file-with-dashes.js",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/file-with-dashes.js",
+            size_bytes=2048,
+            is_binary=False,
+        ),
+        FileRecord(
+            name="file_with_underscores.ts",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/file_with_underscores.ts",
+            size_bytes=3072,
+            is_binary=False,
+        ),
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    results = sarif_data["runs"][0]["results"]
+    assert len(results) == 3
+    
+    # Check that file names appear correctly in messages
+    assert "test file with spaces.py" in results[0]["message"]["text"]
+    assert "file-with-dashes.js" in results[1]["message"]["text"]
+    assert "file_with_underscores.ts" in results[2]["message"]["text"]
+
+
+def test_sarif_output_unicode_characters():
+    """Test that Unicode characters in file names are handled correctly."""
+    file_records = [
+        FileRecord(
+            name="测试文件.py",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/测试文件.py",
+            size_bytes=1024,
+            is_binary=False,
+        ),
+        FileRecord(
+            name="файл.js",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/файл.js",
+            size_bytes=2048,
+            is_binary=False,
+        ),
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    # Should be valid JSON with Unicode
+    assert isinstance(sarif_data, dict)
+    
+    results = sarif_data["runs"][0]["results"]
+    assert len(results) == 2
+    
+    # Check that Unicode appears in messages
+    assert "测试文件.py" in results[0]["message"]["text"]
+    assert "файл.js" in results[1]["message"]["text"]
+
+
+def test_sarif_output_uri_mixed_slashes():
+    """Test that URIs with mixed slashes are normalized correctly."""
+    file_records = [
+        FileRecord(
+            name="test.py",
+            relative_dir="src",
+            absolute_filename="C:\\path\\to\\repo\\src\\test.py",  # Windows path
+            size_bytes=1024,
+            is_binary=False,
+        ),
+        FileRecord(
+            name="test2.py",
+            relative_dir="src",
+            absolute_filename="C:/path/to/repo/src/test2.py",  # Mixed slashes
+            size_bytes=2048,
+            is_binary=False,
+        ),
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    results = sarif_data["runs"][0]["results"]
+    
+    # All URIs should use forward slashes
+    for result in results:
+        location = result["locations"][0]
+        uri = location["physical_location"]["artifact_location"]["uri"]
+        assert "\\" not in uri
+        assert "/" in uri
+
+
+def test_sarif_output_properties_only_when_non_empty():
+    """Test that properties dict is only included when it has content."""
+    # Record with minimal fields (only required)
+    file_records = [
+        FileRecord(
+            name="test.txt",
+            relative_dir=".",
+            absolute_filename="/path/to/repo/test.txt",
+            size_bytes=0,
+            is_binary=False,
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    # Properties should exist because sizeBytes and isBinary are always added
+    assert "properties" in result
+    assert "sizeBytes" in result["properties"]
+    assert "isBinary" in result["properties"]
+
+
+def test_sarif_output_all_optional_fields_populated():
+    """Test SARIF output with all optional fields populated."""
+    commit_date = datetime(2025, 1, 15, 10, 30, 45)
+    file_records = [
+        FileRecord(
+            name="comprehensive.py",
+            relative_dir="src/utils",
+            absolute_filename="/path/to/repo/src/utils/comprehensive.py",
+            size_bytes=5432,
+            is_binary=False,
+            extension=".py",
+            category="code",
+            language="python",
+            data_type=None,
+            dependency_kind="python-requirements",
+            technologies=["docker", "kubernetes"],
+            most_recent_commit_hash="a1b2c3d4e5f6789012345678901234567890abcd",
+            most_recent_commit_date=commit_date,
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    assert "properties" in result
+    
+    props = result["properties"]
+    assert props["gitCommit"] == "a1b2c3d4e5f6789012345678901234567890abcd"
+    assert props["gitDate"] == commit_date.isoformat()
+    assert props["language"] == "python"
+    assert props["category"] == "code"
+    assert props["extension"] == ".py"
+    assert props["sizeBytes"] == 5432
+    assert props["isBinary"] is False
+    assert props["technologies"] == ["docker", "kubernetes"]
+    assert props["dependencyKind"] == "python-requirements"
+
+
+def test_sarif_output_large_number_of_records():
+    """Test that SARIF output handles a large number of file records."""
+    file_records = [
+        FileRecord(
+            name=f"file_{i}.py",
+            relative_dir="src",
+            absolute_filename=f"/path/to/repo/src/file_{i}.py",
+            size_bytes=1024 + i,
+            is_binary=False,
+            language="python",
+            category="code",
+        )
+        for i in range(100)
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    # Should have valid SARIF structure
+    assert sarif_data["version"] == "2.1.0"
+    assert len(sarif_data["runs"]) == 1
+    
+    run = sarif_data["runs"][0]
+    assert len(run["results"]) == 100
+    
+    # Validate with sarif-pydantic
+    sarif_log = Sarif.model_validate(sarif_data)
+    assert len(sarif_log.runs[0].results) == 100
+
+
+def test_sarif_output_json_formatting():
+    """Test that SARIF output is properly formatted JSON with indentation."""
+    file_records = [
+        FileRecord(
+            name="test.py",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/test.py",
+            size_bytes=1024,
+            is_binary=False,
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    
+    # Should be valid JSON
+    sarif_data = json.loads(sarif_output)
+    assert isinstance(sarif_data, dict)
+    
+    # Should have proper indentation (check for newlines and spaces)
+    lines = sarif_output.split("\n")
+    assert len(lines) > 1  # Should be multi-line
+    
+    # Should start with opening brace and version
+    assert sarif_output.strip().startswith("{")
+    assert '"version"' in sarif_output
+    assert '"2.1.0"' in sarif_output
+
+
+def test_sarif_output_message_ordering():
+    """Test that message parts are in the correct order."""
+    file_records = [
+        FileRecord(
+            name="test.py",
+            relative_dir="src",
+            absolute_filename="/path/to/repo/src/test.py",
+            size_bytes=1024,
+            is_binary=False,
+            language="python",
+            category="code",
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    message_text = result["message"]["text"]
+    
+    # Message should start with "File:"
+    assert message_text.startswith("File: test.py")
+    # Should contain all parts in order
+    parts = message_text.split(" | ")
+    assert parts[0] == "File: test.py"
+    assert "Language: python" in parts
+    assert "Category: code" in parts
+    assert "Size: 1024 bytes" in parts
+
+
+def test_sarif_output_no_properties_when_all_optional_none():
+    """Test that properties dict structure is correct even when optional fields are None."""
+    file_records = [
+        FileRecord(
+            name="test.txt",
+            relative_dir=".",
+            absolute_filename="/path/to/repo/test.txt",
+            size_bytes=100,
+            is_binary=False,
+            # All optional fields are None or empty
+            extension=None,
+            category=None,
+            language=None,
+            data_type=None,
+            dependency_kind=None,
+            technologies=[],
+            most_recent_commit_hash=None,
+            most_recent_commit_date=None,
+        )
+    ]
+    
+    sarif_output = format_file_records_as_sarif(file_records)
+    sarif_data = json.loads(sarif_output)
+    
+    result = sarif_data["runs"][0]["results"][0]
+    # Properties should exist with only required fields
+    assert "properties" in result
+    props = result["properties"]
+    assert "sizeBytes" in props
+    assert "isBinary" in props
+    # Optional fields should not be present
+    assert "gitCommit" not in props
+    assert "gitDate" not in props
+    assert "language" not in props
+    assert "category" not in props
+    assert "extension" not in props
+    assert "technologies" not in props
+    assert "dependencyKind" not in props
+    assert "dataType" not in props
+
