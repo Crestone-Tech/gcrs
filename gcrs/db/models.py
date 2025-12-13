@@ -140,11 +140,7 @@ class BOM(Base):
     start_timestamp = Column(TIMESTAMP, nullable=False)
     end_timestamp = Column(TIMESTAMP, nullable=True)
     execution_time_seconds = Column(Numeric(10, 3), nullable=True)
-    status = Column(
-        String(20),
-        nullable=False,
-        CheckConstraint("status IN ('success', 'fail', 'in_progress')", name="check_bom_status"),
-    )
+    status = Column(String(20), nullable=False)
     error = Column(Text, nullable=True)
     scan_config = Column(JSONB, nullable=False)  # Scan configuration/parameters
     created_at = Column(TIMESTAMP, nullable=False, server_default="now()")
@@ -155,6 +151,7 @@ class BOM(Base):
     bom_files = relationship("BOMFile", back_populates="bom", cascade="all, delete-orphan")
 
     __table_args__ = (
+        CheckConstraint("status IN ('success', 'fail', 'in_progress')", name="check_bom_status"),
         Index("idx_bom_repo_id", "repo_id"),
         Index("idx_bom_status", "status"),
         Index("idx_bom_start_timestamp", "start_timestamp"),
