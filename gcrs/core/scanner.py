@@ -847,66 +847,61 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
     data_files_by_extension_counter = Counter()
     files_by_technology_counter = Counter()
 
-    with get_db_session() as session:
-        #repo = get_or_create_repo_in_db(session,repo_root)
-        #bom = create_bom(session,repo_id=repo.id, repo_root=str(repo_root.resolve()), scan_config={}, start_timestamp=datetime.utcnow())
-
-        for filename in filenames:
-            total_files += 1
-            relative_dir = filename.relative_to(repo_root).as_posix()
-         #   file = get_or_create_file_in_db(session,repo_id=repo.id, file_path=relative_dir)
-            absolute_filename = str(filename.absolute())
-            name = filename.name
-            extension = filename.suffix.lower()
-            language = LANGUAGE_BY_EXT.get(extension, None)
-            category = CATEGORY_BY_EXT.get(extension, None)
-            data_type = DATA_TYPES_BY_EXTENSION.get(extension, None)
-            technology = TECHNOLOGY_PATTERNS.get(name.lower(), None)
-            dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
-            size_bytes = filename.stat().st_size
-            is_binary = is_binary_ext(extension)
+    # Scan files and collect file records (no database access needed here)
+    for filename in filenames:
+        total_files += 1
+        relative_dir = filename.relative_to(repo_root).as_posix()
+        absolute_filename = str(filename.absolute())
+        name = filename.name
+        extension = filename.suffix.lower()
+        language = LANGUAGE_BY_EXT.get(extension, None)
+        category = CATEGORY_BY_EXT.get(extension, None)
+        data_type = DATA_TYPES_BY_EXTENSION.get(extension, None)
+        technology = TECHNOLOGY_PATTERNS.get(name.lower(), None)
+        dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
+        size_bytes = filename.stat().st_size
+        is_binary = is_binary_ext(extension)
+    
+        # Get Git commit information
+        commit_date, commit_hash = get_git_commit_info(filename, repo_root)
         
-            # Get Git commit information
-            commit_date, commit_hash = get_git_commit_info(filename, repo_root)
-            
-            new_file_record = FileRecord(
-                relative_dir=relative_dir,
-                absolute_filename=absolute_filename,
-                name=name,
-                extension=extension,
-                category=category,
-                language=language,
-                data_type=data_type,
-                # technologies=technology,  # TODO: add technologies to the file record
-                dependency_kind=dependency_kind,
-                size_bytes=size_bytes,
-                is_binary=is_binary,
-                most_recent_commit_date=commit_date,
-                most_recent_commit_hash=commit_hash,
-            )
-            file_records.append(new_file_record)
+        new_file_record = FileRecord(
+            relative_dir=relative_dir,
+            absolute_filename=absolute_filename,
+            name=name,
+            extension=extension,
+            category=category,
+            language=language,
+            data_type=data_type,
+            # technologies=technology,  # TODO: add technologies to the file record
+            dependency_kind=dependency_kind,
+            size_bytes=size_bytes,
+            is_binary=is_binary,
+            most_recent_commit_date=commit_date,
+            most_recent_commit_hash=commit_hash,
+        )
+        file_records.append(new_file_record)
 
-            # Use Counter's efficient += operator (handles missing keys automatically)
-            if language:
-                files_by_language_counter[language] += 1
-            if category:
-                files_by_category_counter[category] += 1
-            if not extension:
-                files_without_extension += 1
-            else:
-                files_with_extension += 1
-                files_by_extension_counter[extension] += 1
-            if extension and is_binary:
-                binary_files_by_extension_counter[extension] += 1
-            if dependency_kind:
-                files_by_dependency_counter[dependency_kind] += 1
-            if data_type:
-                data_files_by_extension_counter[data_type] += 1
-            if technology:
-                files_by_technology_counter[technology] += 1
-    
-        #complete_bom(session,bom_id=bom.id, status="success", error=None, end_timestamp=datetime.utcnow())
-    
+        # Use Counter's efficient += operator (handles missing keys automatically)
+        if language:
+            files_by_language_counter[language] += 1
+        if category:
+            files_by_category_counter[category] += 1
+        if not extension:
+            files_without_extension += 1
+        else:
+            files_with_extension += 1
+            files_by_extension_counter[extension] += 1
+        if extension and is_binary:
+            binary_files_by_extension_counter[extension] += 1
+        if dependency_kind:
+            files_by_dependency_counter[dependency_kind] += 1
+        if data_type:
+            data_files_by_extension_counter[data_type] += 1
+        if technology:
+            files_by_technology_counter[technology] += 1
+
+    # Persist scan results to database using a single session
     with get_db_session() as session:
         scan_params = ScanParams(
             repo_root=str(repo_root.resolve()),
@@ -914,7 +909,14 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
             skip_dirs=skip_dirs,
             respect_gitignore=respect_gitignore,
         )
-        persist_scan_results(session,repo_root,file_records,scan_params=scan_params,repo_uri=str(repo_root.resolve()),git_owner_account="unknown")
+        persist_scan_results(
+            session=session,
+            repo_root=repo_root,
+            file_records=file_records,
+            scan_params=scan_params,
+            repo_uri=str(repo_root.resolve()),
+            git_owner_account="unknown",
+        )
     
     
     # Convert Counter objects to dicts for Pydantic model (which expects dict[str, int])
