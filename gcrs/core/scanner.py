@@ -822,13 +822,24 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
     Args:
-        repo_root: Path to the root of the repository.
+        repo_root: Path to the root of the repository (must be a git repository).
 
     Returns:
         A tuple containing a list of FileRecord objects for all files in the repository and a summary of the repository contents.
+    
+    Raises:
+        ValueError: If the directory is not a git repository.
     """
     logger.debug("do_the_repo_scan(): start")
     logger.debug("do_the_repo_scan() respect_gitignore param: %s", respect_gitignore)
+    
+    # Validate that this is a git repository
+    git_dir = repo_root / ".git"
+    if not git_dir.exists() or not git_dir.is_dir():
+        raise ValueError(
+            f"Directory is not a git repository: {repo_root}. "
+            "Only git repositories are supported."
+        )
 
     file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root, skip_dirs, respect_gitignore)
