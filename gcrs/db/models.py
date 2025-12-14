@@ -108,7 +108,7 @@ class FileVersion(Base):
 
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     file_id = Column(BigInteger, ForeignKey("file.id", ondelete="CASCADE"), nullable=False)
-    commit_id = Column(BigInteger, ForeignKey("repo_commit.id", ondelete="CASCADE"), nullable=False)
+    commit_id = Column(BigInteger, ForeignKey("repo_commit.id", ondelete="CASCADE"), nullable=True)
     path = Column(Text, nullable=False)  # Path at this commit (may differ if renamed)
     size_bytes = Column(BigInteger, nullable=False)
     content_hash = Column(String(64), nullable=True)  # SHA-256 hash (optional)
