@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlalchemy import select
+from collections import Counter
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from gcrs.db.models import (
@@ -21,7 +22,7 @@ from gcrs.db.models import (
     RepoCommit,
 )
 from gcrs.logger import setup_logging
-from gcrs.models import FileRecord, ScanParams
+from gcrs.models import FileRecord, RepositorySummary, ScanParams
 
 logger = setup_logging()
 
@@ -550,4 +551,118 @@ def persist_scan_results(
         len(file_records),
     )
     return bom
+
+
+def get_repo_summary_from_db(
+    session: Session,
+    repo_id: int,
+    bom_id: int | None = None,
+) -> RepositorySummary | None:
+    """Get repository summary from database for a specific BOM.
+    
+    Aggregates data from BOMFile records to create a RepositorySummary.
+    If bom_id is None, uses the latest BOM for the repository.
+    
+    Args:
+        session: Database session
+        repo_id: Repository ID
+        bom_id: Optional BOM ID. If None, uses latest BOM for the repo
+    
+    Returns:
+        RepositorySummary instance or None if no BOM found
+    """
+    # Get BOM (latest if not specified)
+    if bom_id is None:
+        bom = get_latest_bom(session=session, repo_id=repo_id)
+        if not bom:
+            logger.debug("No BOM found for repo_id=%s", repo_id)
+            return None
+        bom_id = bom.id
+    else:
+        bom = session.get(BOM, bom_id)
+        if not bom or bom.repo_id != repo_id:
+            logger.warning("BOM %s not found or doesn't belong to repo %s", bom_id, repo_id)
+            return None
+    
+    # Query all BOMFile records for this BOM
+    stmt = select(BOMFile).where(BOMFile.bom_id == bom_id)
+    bom_files = session.scalars(stmt).all()
+    
+    if not bom_files:
+        logger.debug("No files found in BOM %s", bom_id)
+        # Return empty summary
+        return RepositorySummary(
+            total_files=0,
+            scanned_files=0,
+            skipped_files=0,
+        )
+    
+    # Initialize counters for aggregation
+    files_by_language_counter = Counter()
+    files_by_category_counter = Counter()
+    files_by_extension_counter = Counter()
+    binary_files_by_extension_counter = Counter()
+    files_by_dependency_counter = Counter()
+    data_files_by_extension_counter = Counter()
+    files_by_technology_counter = Counter()
+    files_without_extension = 0
+    files_with_extension = 0
+    
+    # Aggregate data from BOMFile records
+    for bom_file in bom_files:
+        # Language
+        if bom_file.language:
+            files_by_language_counter[bom_file.language] += 1
+        
+        # Category
+        if bom_file.category:
+            files_by_category_counter[bom_file.category] += 1
+        
+        # Extension
+        if bom_file.extension:
+            files_by_extension_counter[bom_file.extension] += 1
+            files_with_extension += 1
+            
+            # Binary files by extension
+            if bom_file.is_binary:
+                binary_files_by_extension_counter[bom_file.extension] += 1
+        else:
+            files_without_extension += 1
+        
+        # Data type
+        if bom_file.data_type:
+            data_files_by_extension_counter[bom_file.data_type] += 1
+        
+        # Dependency kind
+        if bom_file.dependency_kind:
+            files_by_dependency_counter[bom_file.dependency_kind] += 1
+        
+        # Technologies (array field)
+        if bom_file.technologies:
+            for tech in bom_file.technologies:
+                files_by_technology_counter[tech] += 1
+    
+    # Build RepositorySummary
+    summary = RepositorySummary(
+        files_by_language=dict(files_by_language_counter),
+        files_by_category=dict(files_by_category_counter),
+        files_by_technology=dict(files_by_technology_counter),
+        files_by_dependency=dict(files_by_dependency_counter),
+        files_by_extension=dict(files_by_extension_counter),
+        binary_files_by_extension=dict(binary_files_by_extension_counter),
+        data_files_by_extension=dict(data_files_by_extension_counter),
+        files_without_extension=files_without_extension,
+        files_with_extension=files_with_extension,
+        total_files=len(bom_files),  # Total files in this BOM
+        scanned_files=len(bom_files),  # All files in BOM were scanned
+        skipped_files=0,  # We don't track skipped files in the database
+    )
+    
+    logger.debug(
+        "Generated summary from DB: repo_id=%s, bom_id=%s, files=%d",
+        repo_id,
+        bom_id,
+        len(bom_files),
+    )
+    return summary
 

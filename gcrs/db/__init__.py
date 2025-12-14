@@ -20,6 +20,7 @@ from gcrs.db.services import (
     get_or_create_file_version,
     get_or_create_repo,
     get_or_create_repo_commit,
+    get_repo_summary_from_db,
     link_bom_commits,
     persist_scan_results,
 )
@@ -45,6 +46,7 @@ __all__ = [
     "link_bom_commits",
     "complete_bom",
     "get_latest_bom",
+    "get_repo_summary_from_db",
     "persist_scan_results",
 ]
 
