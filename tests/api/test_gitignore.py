@@ -3,10 +3,54 @@
 This module contains tests for verifying that the scanner correctly
 respects .gitignore files when the respect_gitignore parameter is enabled.
 """
+import subprocess
 import tempfile
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+
+
+def _init_git_repo(repo_root: Path) -> None:
+    """Initialize a git repository and commit all files.
+    
+    Args:
+        repo_root: Path to the repository root directory.
+    """
+    # Initialize git repository
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    
+    # Configure git user (required for commits)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    
+    # Add all files and commit
+    subprocess.run(
+        ["git", "add", "-A"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
 
 
 def test_respect_gitignore_enabled_skips_ignored_files(client: TestClient):
@@ -31,6 +75,9 @@ def test_respect_gitignore_enabled_skips_ignored_files(client: TestClient):
         included_dir = repo_root / "included_dir"
         included_dir.mkdir()
         (included_dir / "file.txt").write_text("included file", encoding="utf-8")
+        
+        # Initialize as git repository (required for scanning)
+        _init_git_repo(repo_root)
         
         # Scan with respect_gitignore=True (default)
         response = client.post(
@@ -82,6 +129,9 @@ def test_respect_gitignore_disabled_includes_ignored_files(client: TestClient):
         (repo_root / "app.py").write_text("python code", encoding="utf-8")
         (repo_root / "readme.md").write_text("readme content", encoding="utf-8")
         
+        # Initialize as git repository (required for scanning)
+        _init_git_repo(repo_root)
+        
         # Scan with respect_gitignore=False
         response = client.post(
             "/scan/summary",
@@ -121,6 +171,9 @@ def test_respect_gitignore_no_gitignore_file(client: TestClient):
         (repo_root / "readme.md").write_text("readme content", encoding="utf-8")
         (repo_root / "app.log").write_text("log content", encoding="utf-8")
         
+        # Initialize as git repository (required for scanning)
+        _init_git_repo(repo_root)
+        
         # Scan with respect_gitignore=True but no .gitignore file
         response = client.post(
             "/scan/summary",
@@ -158,6 +211,9 @@ def test_respect_gitignore_default_behavior(client: TestClient):
         # Create files
         (repo_root / "app.py").write_text("python code", encoding="utf-8")
         (repo_root / "app.log").write_text("log content", encoding="utf-8")
+        
+        # Initialize as git repository (required for scanning)
+        _init_git_repo(repo_root)
         
         # Scan without specifying respect_gitignore (should default to True)
         response = client.post(
