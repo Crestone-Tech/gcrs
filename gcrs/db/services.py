@@ -168,17 +168,19 @@ def get_or_create_file(
 def get_or_create_file_version(
     session: Session,
     file_id: int,
-    commit_id: int | None,
+    commit_id: int,
     file_path: str,
     size_bytes: int,
     content_hash: str | None = None,
 ) -> FileVersion:
     """Get or create a file version record (idempotent).
     
+    Scanning the same file at the same commit will reuse the existing file_version record.
+    
     Args:
         session: Database session
         file_id: File ID
-        commit_id: Commit ID. If None, creates a version without commit association
+        commit_id: Commit ID (currently a git commit hash)
         file_path: File path at this commit (may differ if renamed)
         size_bytes: File size in bytes
         content_hash: Optional SHA-256 hash of file content
@@ -187,26 +189,19 @@ def get_or_create_file_version(
         FileVersion instance (existing or newly created)
     """
     # Try to find existing file version
-    if commit_id is not None:
-        stmt = select(FileVersion).where(
-            FileVersion.file_id == file_id,
-            FileVersion.commit_id == commit_id,
+    stmt = select(FileVersion).where(
+        FileVersion.file_id == file_id,
+        FileVersion.commit_id == commit_id,
+    )
+    file_version = session.scalar(stmt)
+    if file_version:
+        logger.debug(
+            "Found existing file version: file_id=%s, commit_id=%s (id=%s)",
+            file_id,
+            commit_id,
+            file_version.id,
         )
-    else:
-        # If no commit_id, we can't use idempotency - create new version
-        # In practice, we should always have a commit_id for proper versioning
-        stmt = None
-    
-    if stmt:
-        file_version = session.scalar(stmt)
-        if file_version:
-            logger.debug(
-                "Found existing file version: file_id=%s, commit_id=%s (id=%s)",
-                file_id,
-                commit_id,
-                file_version.id,
-            )
-            return file_version
+        return file_version
     
     # Create new file version
     file_version = FileVersion(
@@ -499,17 +494,21 @@ def persist_scan_results(
             file_name=file_record.name,
         )
         
-        # Get or create RepoCommit if commit info is available
-        commit_id = None
-        if file_record.most_recent_commit_hash:
-            commit = get_or_create_repo_commit(
-                session=session,
-                repo_id=repo.id,
-                commit_hash=file_record.most_recent_commit_hash,
-                commit_timestamp=file_record.most_recent_commit_date,
+        # Get or create RepoCommit 
+        if not file_record.most_recent_commit_hash:
+            raise ValueError(
+                f"File {file_record.name} has no commit hash. "
+                "Repository must be a git repository with commit history."
             )
-            commit_id = commit.id
-            unique_commits[file_record.most_recent_commit_hash] = commit
+        
+        commit = get_or_create_repo_commit(
+            session=session,
+            repo_id=repo.id,
+            commit_hash=file_record.most_recent_commit_hash,
+            commit_timestamp=file_record.most_recent_commit_date,
+        )
+        commit_id = commit.id
+        unique_commits[file_record.most_recent_commit_hash] = commit
         
         # Get or create FileVersion
         file_version = get_or_create_file_version(
