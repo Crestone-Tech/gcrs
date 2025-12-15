@@ -118,6 +118,16 @@ class ScanParams(BaseModel):
         description="Whether to persist the scan results to the database",
         json_schema_extra={"example": True},
     )
+    write_output_file: bool = Field(
+        default=True,
+        description="Whether to write scan results to an output file",
+        json_schema_extra={"example": True},
+    )
+    skip_git_commit_info: bool = Field(
+        default=False,
+        description="Whether to skip retrieving git commit information (faster, but commit info will be None)",
+        json_schema_extra={"example": False},
+    )
     skip_dirs: list[str] = Field(
         default_factory=list,
         description="List of directories to skip during scanning",

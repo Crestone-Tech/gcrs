@@ -303,7 +303,7 @@ class TestDoTheRepoScanWithCommitInfo:
             "gcrs.core.scanner.get_git_commit_info",
             return_value=(mock_commit_date, mock_commit_hash)
         ):
-            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False)
+            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         
         assert len(file_records) > 0
         # Find the test.py file record
@@ -326,7 +326,7 @@ class TestDoTheRepoScanWithCommitInfo:
             "gcrs.core.scanner.get_git_commit_info",
             return_value=(None, None)
         ):
-            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False)
+            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         
         assert len(file_records) > 0
         # Find the test.py file record

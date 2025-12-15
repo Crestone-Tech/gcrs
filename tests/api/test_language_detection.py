@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_scan_summary_c_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -22,7 +22,7 @@ def test_scan_summary_c_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_cpp_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -34,7 +34,7 @@ def test_scan_summary_cpp_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_csharp_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -45,7 +45,7 @@ def test_scan_summary_csharp_detection(client: TestClient, sample_repo_path: Pat
 
 
 def test_scan_summary_css_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -56,7 +56,7 @@ def test_scan_summary_css_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_go_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -67,7 +67,7 @@ def test_scan_summary_go_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_html_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -78,7 +78,7 @@ def test_scan_summary_html_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_java_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -89,7 +89,7 @@ def test_scan_summary_java_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_javascript_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -107,7 +107,7 @@ def test_scan_summary_javascript_detection(client: TestClient, sample_repo_path:
 
 
 def test_scan_summary_kotlin_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -118,7 +118,7 @@ def test_scan_summary_kotlin_detection(client: TestClient, sample_repo_path: Pat
 
 
 def test_scan_summary_markdown_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -129,7 +129,7 @@ def test_scan_summary_markdown_detection(client: TestClient, sample_repo_path: P
 
 
 def test_scan_summary_objective_c_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -140,7 +140,7 @@ def test_scan_summary_objective_c_detection(client: TestClient, sample_repo_path
 
 
 def test_scan_summary_objective_c_plus_plus_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -151,7 +151,7 @@ def test_scan_summary_objective_c_plus_plus_detection(client: TestClient, sample
 
 
 def test_scan_summary_php_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -162,7 +162,7 @@ def test_scan_summary_php_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_python_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -173,7 +173,7 @@ def test_scan_summary_python_detection(client: TestClient, sample_repo_path: Pat
 
 
 def test_scan_summary_ruby_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -184,7 +184,7 @@ def test_scan_summary_ruby_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_rust_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -195,7 +195,7 @@ def test_scan_summary_rust_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_sass_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -206,7 +206,7 @@ def test_scan_summary_sass_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_scala_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -217,7 +217,7 @@ def test_scan_summary_scala_detection(client: TestClient, sample_repo_path: Path
 
 
 def test_scan_summary_scss_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -228,7 +228,7 @@ def test_scan_summary_scss_detection(client: TestClient, sample_repo_path: Path)
 
 
 def test_scan_summary_sql_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -239,7 +239,7 @@ def test_scan_summary_sql_detection(client: TestClient, sample_repo_path: Path):
 
 
 def test_scan_summary_swift_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -250,7 +250,7 @@ def test_scan_summary_swift_detection(client: TestClient, sample_repo_path: Path
 
 
 def test_scan_summary_typescript_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "markdown", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -262,7 +262,7 @@ def test_scan_summary_typescript_detection(client: TestClient, sample_repo_path:
 
 
 def test_scan_summary_vb_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"

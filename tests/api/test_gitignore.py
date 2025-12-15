@@ -87,6 +87,8 @@ def test_respect_gitignore_enabled_skips_ignored_files(client: TestClient):
                 "respect_gitignore": True,
                 "output_file_format": "json",
                 "persist_to_db": False,
+                "write_output_file": False,
+                "skip_git_commit_info": True,
             },
         )
         
@@ -141,6 +143,8 @@ def test_respect_gitignore_disabled_includes_ignored_files(client: TestClient):
                 "respect_gitignore": False,
                 "output_file_format": "json",
                 "persist_to_db": False,
+                "write_output_file": False,
+                "skip_git_commit_info": True,
             },
         )
         
@@ -184,6 +188,8 @@ def test_respect_gitignore_no_gitignore_file(client: TestClient):
                 "respect_gitignore": True,
                 "output_file_format": "json",
                 "persist_to_db": False,
+                "write_output_file": False,
+                "skip_git_commit_info": True,
             },
         )
         
@@ -225,6 +231,8 @@ def test_respect_gitignore_default_behavior(client: TestClient):
                 "repo_root": str(repo_root),
                 "output_file_format": "json",
                 "persist_to_db": False,
+                "write_output_file": False,
+                "skip_git_commit_info": True,
             },
         )
         

@@ -1,5 +1,7 @@
 # ignore .git in the the nested git repository for testing
 tests/sample_repo/.git/
+# ignore output files in test sample repo
+tests/sample_repo/output/
 
 # Output files
 output/
