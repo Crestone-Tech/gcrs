@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from pathspec import GitIgnoreSpec
 from pydantic import ValidationError
+from sqlalchemy.orm import Session
 from sarif_pydantic import (
     ArtifactLocation,
     Level,
@@ -30,8 +31,11 @@ from sarif_pydantic import (
 )
 
 from gcrs.constants import OUTPUT_FORMAT_JSON, OUTPUT_FORMAT_MARKDOWN, OUTPUT_FORMAT_SARIF, OUTPUT_FORMAT_CSV, OutputFormat
+from gcrs.models import ScanParams
 from gcrs.logger import setup_logging
 from gcrs.models import FileRecord, RepositorySummary, ScanResponse, SummaryResponse
+
+from gcrs.db import *
 
 logger = setup_logging(log_level="DEBUG")
 
@@ -784,21 +788,63 @@ def get_git_commit_info(file_path: Path, repo_root: Path) -> tuple[datetime | No
         logger.warning("get_git_commit_info() error getting commit info for %s: %s", file_path, e)
         return None, None
 
+# def get_or_create_repo_in_db(session: Session, repo_root: Path) -> Repo:
+#     """Get or create a repository record.
+    
+#     Args:
+#         session: Session object
+#         repo_root: Path to the root of the repository.
+    
+#     Returns:
+#         A Repo object.
+#     """
+#     uri = str(repo_root.resolve())
+#     git_owner_account = "unknown"
+#     repo = get_or_create_repo(session,uri=uri, git_owner_account=git_owner_account)
+#     return repo
+
+# def get_or_create_file_in_db(session: Session, repo_id: int, file_path: str) -> File:
+#     """Get or create a file record.
+    
+#     Args:
+#         session: Session object
+#         repo_id: Repository ID
+#         file_path: Path to the file relative to the repository root.
+    
+#     Returns:
+#         A File object.
+#     """
+
+#     file = get_or_create_file(session,repo_id=repo_id, file_path=file_path)
+#     return file
 
 def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore: bool = True) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
     Args:
-        repo_root: Path to the root of the repository.
+        repo_root: Path to the root of the repository (must be a git repository).
 
     Returns:
         A tuple containing a list of FileRecord objects for all files in the repository and a summary of the repository contents.
+    
+    Raises:
+        ValueError: If the directory is not a git repository.
     """
     logger.debug("do_the_repo_scan(): start")
     logger.debug("do_the_repo_scan() respect_gitignore param: %s", respect_gitignore)
+    
+    # Validate that this is a git repository
+    git_dir = repo_root / ".git"
+    if not git_dir.exists() or not git_dir.is_dir():
+        raise ValueError(
+            f"Directory is not a git repository: {repo_root}. "
+            "Only git repositories are supported."
+        )
 
     file_records: list[FileRecord] = []
     filenames = walk_the_repo(repo_root, skip_dirs, respect_gitignore)
+    
+    
     total_files = 0
     files_without_extension = 0
     files_with_extension = 0
@@ -812,6 +858,7 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
     data_files_by_extension_counter = Counter()
     files_by_technology_counter = Counter()
 
+    # Scan files and collect file records (no database access needed here)
     for filename in filenames:
         total_files += 1
         relative_dir = filename.relative_to(repo_root).as_posix()
@@ -825,7 +872,7 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
         dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
         size_bytes = filename.stat().st_size
         is_binary = is_binary_ext(extension)
-        
+    
         # Get Git commit information
         commit_date, commit_hash = get_git_commit_info(filename, repo_root)
         
@@ -865,6 +912,24 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
         if technology:
             files_by_technology_counter[technology] += 1
 
+    # Persist scan results to database using a single session
+    with get_db_session() as session:
+        scan_params = ScanParams(
+            repo_root=str(repo_root.resolve()),
+            output_file_format=OUTPUT_FORMAT_MARKDOWN,
+            skip_dirs=skip_dirs,
+            respect_gitignore=respect_gitignore,
+        )
+        persist_scan_results(
+            session=session,
+            repo_root=repo_root,
+            file_records=file_records,
+            scan_params=scan_params,
+            repo_uri=str(repo_root.resolve()),
+            git_owner_account="unknown",
+        )
+    
+    
     # Convert Counter objects to dicts for Pydantic model (which expects dict[str, int])
     summary = RepositorySummary(
         files_by_language=dict(files_by_language_counter),
