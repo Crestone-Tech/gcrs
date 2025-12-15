@@ -70,7 +70,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
     - `status`: "success" or "error"
     - `error`: Error message if status is "error"
 """
-
+    logger.debug("gcrs.api.main:scan_repository() starting with parameters: %s", params)
     logger.debug("gcrs.api.main:scan_repository() starting at directory: %s", params.repo_root)
 
     try:
@@ -84,6 +84,7 @@ async def scan_repository(params: ScanParams) -> ScanResponse:
             repo_root=params.repo_root,
             output_file=output_file,
             output_file_format=params.output_file_format,
+            persist_to_db=params.persist_to_db,
             skip_dirs=params.skip_dirs,
             respect_gitignore=params.respect_gitignore,
         )
@@ -146,6 +147,7 @@ async def summarize_repository_contents(params: ScanParams) -> SummaryResponse:
             output_file_format=params.output_file_format,
             skip_dirs=params.skip_dirs,
             respect_gitignore=params.respect_gitignore,
+            persist_to_db=params.persist_to_db,
         )
         logger.debug(
             "method: summarize_repo_contents() finished summarizing repository content, status: %s",

@@ -818,7 +818,7 @@ def get_git_commit_info(file_path: Path, repo_root: Path) -> tuple[datetime | No
 #     file = get_or_create_file(session,repo_id=repo_id, file_path=file_path)
 #     return file
 
-def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitignore: bool = True) -> tuple[list[FileRecord], RepositorySummary]:
+def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: bool = True, respect_gitignore: bool = True) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
 
     Args:
@@ -912,24 +912,24 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], respect_gitigno
         if technology:
             files_by_technology_counter[technology] += 1
 
-    # Persist scan results to database using a single session
-    with get_db_session() as session:
-        scan_params = ScanParams(
-            repo_root=str(repo_root.resolve()),
-            output_file_format=OUTPUT_FORMAT_MARKDOWN,
-            skip_dirs=skip_dirs,
-            respect_gitignore=respect_gitignore,
-        )
-        persist_scan_results(
-            session=session,
-            repo_root=repo_root,
-            file_records=file_records,
-            scan_params=scan_params,
-            repo_uri=str(repo_root.resolve()),
-            git_owner_account="unknown",
-        )
-    
-    
+    if persist_to_db:
+        # Persist scan results to database using a single session
+        with get_db_session() as session:
+            scan_params = ScanParams(
+                repo_root=str(repo_root.resolve()),
+                output_file_format=OUTPUT_FORMAT_MARKDOWN,
+                skip_dirs=skip_dirs,
+                respect_gitignore=respect_gitignore,
+            )
+            persist_scan_results(
+                session=session,
+                repo_root=repo_root,
+                file_records=file_records,
+                scan_params=scan_params,
+                repo_uri=str(repo_root.resolve()),
+                git_owner_account="unknown",
+            )
+            
     # Convert Counter objects to dicts for Pydantic model (which expects dict[str, int])
     summary = RepositorySummary(
         files_by_language=dict(files_by_language_counter),
@@ -953,6 +953,7 @@ def scan_repository(
     repo_root: Path,
     output_file: Path | None = None,
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
+    persist_to_db: bool = True,
     skip_dirs: list[str] = [],
     respect_gitignore: bool = True,
     output_stream: object | None = None,
@@ -976,7 +977,7 @@ def scan_repository(
     logger.debug("scan_repository(): start")
 
     try:
-        file_records, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
+        file_records, summary = do_the_repo_scan(repo_root, skip_dirs, persist_to_db, respect_gitignore)
         write_file_records_to_file(
             file_records=file_records,
             output_file=output_file,
@@ -1001,6 +1002,7 @@ def summarize_repo_contents(
     output_file_format: OutputFormat = OUTPUT_FORMAT_MARKDOWN,
     skip_dirs: list[str] = [],
     respect_gitignore: bool = True,
+    persist_to_db: bool = True,
     output_stream: object | None = None,
 ) -> SummaryResponse:
     """Summarize the contents of the repository.
@@ -1024,7 +1026,7 @@ def summarize_repo_contents(
     logger.debug("summarize_repo_contents(): start")
 
     try:
-        _, summary = do_the_repo_scan(repo_root, skip_dirs, respect_gitignore)
+        _, summary = do_the_repo_scan(repo_root, skip_dirs, persist_to_db, respect_gitignore)
         write_summary_to_file(
             summary=summary,
             output_file=output_file,

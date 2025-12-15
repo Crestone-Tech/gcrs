@@ -113,6 +113,11 @@ class ScanParams(BaseModel):
         description="Format of the output file. Defaults to json if blank/not provided. Other options are markdown, csv, and sarif. Markdown and csv output tables, sarif output is a JSON file that can be used for static analysis.",
         json_schema_extra={"examples": ["json", "markdown", "csv", "sarif"]},
     )
+    persist_to_db: bool = Field(
+        default=False,
+        description="Whether to persist the scan results to the database",
+        json_schema_extra={"example": True},
+    )
     skip_dirs: list[str] = Field(
         default_factory=list,
         description="List of directories to skip during scanning",

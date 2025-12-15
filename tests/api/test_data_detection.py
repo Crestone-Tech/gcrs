@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def test_scan_summary_csv_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -15,7 +15,7 @@ def test_scan_summary_csv_data_detection(client: TestClient, sample_repo_path: P
 
 
 def test_scan_summary_jsonl_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -26,7 +26,7 @@ def test_scan_summary_jsonl_data_detection(client: TestClient, sample_repo_path:
 
 
 def test_scan_summary_ndjson_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -37,7 +37,7 @@ def test_scan_summary_ndjson_data_detection(client: TestClient, sample_repo_path
 
 
 def test_scan_summary_parquet_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -48,7 +48,7 @@ def test_scan_summary_parquet_data_detection(client: TestClient, sample_repo_pat
 
 
 def test_scan_summary_sqlite_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -59,7 +59,7 @@ def test_scan_summary_sqlite_data_detection(client: TestClient, sample_repo_path
 
 
 def test_scan_summary_db_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -70,7 +70,7 @@ def test_scan_summary_db_data_detection(client: TestClient, sample_repo_path: Pa
 
 
 def test_scan_summary_tsv_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -81,7 +81,7 @@ def test_scan_summary_tsv_data_detection(client: TestClient, sample_repo_path: P
 
 
 def test_scan_summary_xml_data_detection(client: TestClient, sample_repo_path: Path):
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
@@ -93,7 +93,7 @@ def test_scan_summary_xml_data_detection(client: TestClient, sample_repo_path: P
 
 def test_scan_summary_all_data_files_detection(client: TestClient, sample_repo_path: Path):
     """Test that all data file types are correctly detected and categorized."""
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json"})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "output_file_format": "json", "persist_to_db": False})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"

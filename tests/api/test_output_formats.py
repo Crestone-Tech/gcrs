@@ -16,6 +16,7 @@ def test_summary_json_output_format(client: TestClient, sample_repo_path: Path):
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "json",
+            "persist_to_db": False,
         },
     )
     
@@ -58,6 +59,7 @@ def test_summary_markdown_output_format(client: TestClient, sample_repo_path: Pa
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "markdown",
+            "persist_to_db": False,
         },
     )
     
@@ -109,6 +111,7 @@ def test_summary_default_output_format(client: TestClient, sample_repo_path: Pat
         "/scan/summary",
         json={
             "repo_root": str(sample_repo_path),
+            "persist_to_db": False,
             # output_file_format not specified - should default to json
         },
     )
@@ -137,6 +140,7 @@ def test_summary_same_data_different_formats(client: TestClient, sample_repo_pat
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "json",
+            "persist_to_db": False,
         },
     )
     
@@ -145,6 +149,7 @@ def test_summary_same_data_different_formats(client: TestClient, sample_repo_pat
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "markdown",
+            "persist_to_db": False,
         },
     )
     
@@ -173,6 +178,7 @@ def test_summary_json_file_content_structure(client: TestClient, sample_repo_pat
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "json",
+            "persist_to_db": False,
         },
     )
     
