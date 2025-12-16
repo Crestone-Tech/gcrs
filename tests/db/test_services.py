@@ -33,7 +33,7 @@ class TestGetOrCreateRepo:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
 
         assert repo.id is not None
@@ -49,7 +49,7 @@ class TestGetOrCreateRepo:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -58,7 +58,7 @@ class TestGetOrCreateRepo:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
 
         assert repo1.id == repo2.id
@@ -70,7 +70,7 @@ class TestGetOrCreateRepo:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -79,7 +79,7 @@ class TestGetOrCreateRepo:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="different-name",
+            repo_name="different-name",
         )
 
         # Should return the same repo
@@ -95,7 +95,7 @@ class TestGetOrCreateRepoCommit:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -118,7 +118,7 @@ class TestGetOrCreateRepoCommit:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -150,7 +150,7 @@ class TestGetOrCreateFile:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -173,7 +173,7 @@ class TestGetOrCreateFile:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -204,7 +204,7 @@ class TestGetOrCreateFileVersion:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         commit = get_or_create_repo_commit(
             session=test_db_session,
@@ -241,7 +241,7 @@ class TestGetOrCreateFileVersion:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         commit = get_or_create_repo_commit(
             session=test_db_session,
@@ -286,7 +286,7 @@ class TestBOMOperations:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -317,7 +317,7 @@ class TestBOMOperations:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -349,7 +349,7 @@ class TestBOMOperations:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 
@@ -388,7 +388,7 @@ class TestBOMFileOperations:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         commit = get_or_create_repo_commit(
             session=test_db_session,
@@ -445,7 +445,7 @@ class TestLinkBOMCommits:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         commit1 = get_or_create_repo_commit(
             session=test_db_session,
@@ -590,7 +590,7 @@ class TestGetRepoSummaryFromDB:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         commit = get_or_create_repo_commit(
             session=test_db_session,
@@ -649,7 +649,7 @@ class TestGetRepoSummaryFromDB:
             session=test_db_session,
             uri="https://github.com/test/repo.git",
             git_owner_account="github.com/test",
-            name="test-repo",
+            repo_name="test-repo",
         )
         test_db_session.commit()
 

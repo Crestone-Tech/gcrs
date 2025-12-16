@@ -109,13 +109,17 @@ def init_db() -> None:
     create_views()  # Create views after tables
     logger.info("Database schema initialized successfully")
 
-def create_views() -> None:
+def create_views(engine: Engine | None = None) -> None:
     """Create database views.
     
     Views are not part of SQLAlchemy models, so we execute raw SQL.
     Uses CREATE OR REPLACE VIEW so it's safe to run multiple times.
+    
+    Args:
+        engine: Optional engine to use. If None, uses get_engine().
     """
-    engine = get_engine()
+    if engine is None:
+        engine = get_engine()
     logger.info("Creating database views...")
     
     # Define the repo_summary view SQL
