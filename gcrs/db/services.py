@@ -4,7 +4,7 @@ This module provides high-level functions for persisting scan results to the dat
 following the scan execution flow defined in DATABASE_DESIGN.md.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -108,7 +108,7 @@ def get_or_create_repo_commit(
     
     # Create new commit
     if commit_timestamp is None:
-        commit_timestamp = datetime.utcnow()
+        commit_timestamp = datetime.now(timezone.utc)
     
     commit = RepoCommit(
         repo_id=repo_id,
@@ -242,7 +242,7 @@ def create_bom(
         BOM instance
     """
     if start_timestamp is None:
-        start_timestamp = datetime.utcnow()
+        start_timestamp = datetime.now(timezone.utc)
     
     bom = BOM(
         repo_id=repo_id,
@@ -381,7 +381,7 @@ def complete_bom(
         raise ValueError(f"BOM with id={bom_id} not found")
     
     if end_timestamp is None:
-        end_timestamp = datetime.utcnow()
+        end_timestamp = datetime.now(timezone.utc)
     
     bom.end_timestamp = end_timestamp
     bom.status = status
