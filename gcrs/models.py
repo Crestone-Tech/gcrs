@@ -92,7 +92,7 @@ class ScanOptions(BaseModel):
     skip_dirs: list[str] = Field(
         default_factory=list,
         description="List of directories to skip during scanning",
-        json_schema_extra={"examples": [".git", "node_modules", "venv", "__pycache__"]},
+        json_schema_extra={"example": [".git", "node_modules", "venv", "__pycache__"]},
     )
     respect_gitignore: bool = Field(
         default=True,
@@ -131,7 +131,7 @@ class ScanParams(BaseModel):
     skip_dirs: list[str] = Field(
         default_factory=list,
         description="List of directories to skip during scanning",
-        json_schema_extra={"examples": [".git", "node_modules", "venv", "__pycache__"]},
+        json_schema_extra={"example": [".git", "node_modules", "venv", "__pycache__"]},
     )
     
     respect_gitignore: bool = Field(

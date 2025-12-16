@@ -481,8 +481,32 @@ def persist_scan_results(
     # Track unique commits for linking
     unique_commits: dict[str, RepoCommit] = {}
     
-    # 3. Process each file record
+    # Filter out files without commit hashes (untracked/uncommitted files)
+    # These files cannot be persisted as they require commit information
+    files_with_commits = []
+    files_without_commits = []
+    
     for file_record in file_records:
+        if file_record.most_recent_commit_hash:
+            files_with_commits.append(file_record)
+        else:
+            files_without_commits.append(file_record)
+    
+    if files_without_commits:
+        logger.warning(
+            "Skipping %d file(s) without commit hashes (untracked or uncommitted): %s",
+            len(files_without_commits),
+            [f.name for f in files_without_commits[:10]],  # Show first 10
+        )
+    
+    if not files_with_commits:
+        raise ValueError(
+            "No files with commit hashes found. "
+            "Repository must be a git repository with at least one committed file."
+        )
+    
+    # 3. Process each file record (only files with commits)
+    for file_record in files_with_commits:
         # Build relative path
         relative_path = str(Path(file_record.relative_dir) / file_record.name)
         
@@ -494,13 +518,7 @@ def persist_scan_results(
             file_name=file_record.name,
         )
         
-        # Get or create RepoCommit 
-        if not file_record.most_recent_commit_hash:
-            raise ValueError(
-                f"File {file_record.name} has no commit hash. "
-                "Repository must be a git repository with commit history."
-            )
-        
+        # Get or create RepoCommit (we know commit_hash exists from filtering above)
         commit = get_or_create_repo_commit(
             session=session,
             repo_id=repo.id,
@@ -544,10 +562,11 @@ def persist_scan_results(
     bom = complete_bom(session=session, bom_id=bom.id, status="success")
     
     logger.info(
-        "Persisted scan results: bom_id=%s, repo_id=%s, files=%d",
+        "Persisted scan results: bom_id=%s, repo_id=%s, files=%d (skipped %d files without commits)",
         bom.id,
         repo.id,
-        len(file_records),
+        len(files_with_commits),
+        len(files_without_commits),
     )
     return bom
 

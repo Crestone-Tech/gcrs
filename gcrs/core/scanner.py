@@ -820,8 +820,10 @@ def get_git_commit_info_batch(file_paths: list[Path], repo_root: Path) -> dict[P
         for file_path in file_paths:
             try:
                 rel_path = file_path.relative_to(repo_root)
-                rel_paths.append(str(rel_path))
-                path_mapping[str(rel_path)] = file_path
+                # Normalize to forward slashes (git always uses forward slashes)
+                rel_path_str = rel_path.as_posix()
+                rel_paths.append(rel_path_str)
+                path_mapping[rel_path_str] = file_path
             except ValueError:
                 # file is not under repo_root, skip it
                 continue
@@ -830,25 +832,26 @@ def get_git_commit_info_batch(file_paths: list[Path], repo_root: Path) -> dict[P
 
         # run a single Git command to get the most recent commit date and hash for all files in the repository
         # Use --format with delimiter to separate hash and date
+        # Use --name-only to get file paths associated with each commit
         # Use -- to separate file paths from the command options
         result = subprocess.run(
-            ["git", "log", "-1", "--format=%H|%ai", "--"] + rel_paths,
+            ["git", "log", "-1", "--format=%H|%ai", "--name-only", "--"] + rel_paths,
             cwd=repo_root,
             capture_output=True,
             text=True,  
             timeout=10,  # Longer timeout for many files
         )
 
-       # Initialize result dict with None values
+        # Initialize result dict with None values
         commit_info = {path: (None, None) for path in file_paths}
         
         if result.returncode != 0 or not result.stdout.strip():
             # No commits found or error
             return commit_info
 
-        # Parse output: Git outputs one block per file that has commits
-        # Format: "hash|YYYY-MM-DD HH:MM:SS +TZ\n" followed by file path
-        # We need to parse this carefully
+        # Parse output: Git outputs commit info followed by file paths
+        # Format: "hash|YYYY-MM-DD HH:MM:SS +TZ\n" followed by file paths (one per line)
+        # Multiple files in the same commit will share the same commit line
         lines = result.stdout.strip().split('\n')
         current_hash = None
         current_date = None
@@ -862,16 +865,25 @@ def get_git_commit_info_batch(file_paths: list[Path], repo_root: Path) -> dict[P
             if '|' in line and len(line.split('|')) == 2:
                 parts = line.split('|')
                 current_hash = parts[0]
-                current_date = parts[1]
+                date_str = parts[1]
+                
+                # Parse datetime
+                try:
+                    # Remove timezone offset if present
+                    if "+" in date_str or date_str.count("-") > 2:
+                        date_str = date_str.rsplit(" ", 1)[0]
+                    current_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    logger.warning("get_git_commit_info_batch() failed to parse date: %s", date_str)
+                    current_date = None
+                    current_hash = None
             else:
-                # this line is a file path (relative to repo root) with no commit info
+                # This line is a file path (relative to repo root)
                 if line in path_mapping:
                     original_path = path_mapping[line]
                     if current_hash and current_date:
                         commit_info[original_path] = (current_date, current_hash)
-                        #reset for next file
-                        current_hash = None
-                        current_date = None
+                    # Don't reset - same commit can apply to multiple files
 
         return commit_info
     except subprocess.TimeoutExpired:
