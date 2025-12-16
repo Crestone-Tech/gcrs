@@ -295,13 +295,17 @@ class TestDoTheRepoScanWithCommitInfo:
         # Initialize as git repository (required for do_the_repo_scan)
         _init_git_repo(tmp_path)
         
-        # Mock get_git_commit_info to return commit info
+        # Mock get_git_commit_info_batch to return commit info
         mock_commit_date = datetime(2025, 1, 15, 14, 30, 0)
         mock_commit_hash = "a1b2c3d4e5f6789012345678901234567890abcd"
         
+        # Create a mock return value that maps file paths to commit info
+        def mock_batch(filenames, repo_root):
+            return {filename: (mock_commit_date, mock_commit_hash) for filename in filenames}
+        
         with patch(
-            "gcrs.core.scanner.get_git_commit_info",
-            return_value=(mock_commit_date, mock_commit_hash)
+            "gcrs.core.scanner.get_git_commit_info_batch",
+            side_effect=mock_batch
         ):
             file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         
@@ -321,10 +325,13 @@ class TestDoTheRepoScanWithCommitInfo:
         # Initialize as git repository (required for do_the_repo_scan)
         _init_git_repo(tmp_path)
         
-        # Mock get_git_commit_info to return None (no Git repo or file not tracked)
+        # Mock get_git_commit_info_batch to return None (no Git repo or file not tracked)
+        def mock_batch_none(filenames, repo_root):
+            return {filename: (None, None) for filename in filenames}
+        
         with patch(
-            "gcrs.core.scanner.get_git_commit_info",
-            return_value=(None, None)
+            "gcrs.core.scanner.get_git_commit_info_batch",
+            side_effect=mock_batch_none
         ):
             file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         

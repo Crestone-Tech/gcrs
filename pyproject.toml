@@ -32,6 +32,9 @@ dev = [
 
 [tool.pytest.ini_options]
 addopts = "-q --log-cli-level=INFO --durations=10"
+filterwarnings = [
+    "ignore::DeprecationWarning:testcontainers.*",
+]
 
 [tool.ruff]
 # Set the maximum line length to 120 characters

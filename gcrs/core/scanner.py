@@ -790,35 +790,112 @@ def get_git_commit_info(file_path: Path, repo_root: Path) -> tuple[datetime | No
         logger.warning("get_git_commit_info() error getting commit info for %s: %s", file_path, e)
         return None, None
 
-# def get_or_create_repo_in_db(session: Session, repo_root: Path) -> Repo:
-#     """Get or create a repository record.
+def get_git_commit_info_batch(file_paths: list[Path], repo_root: Path) -> dict[Path, tuple[datetime | None, str | None]]:
+    """Get the most recent commit date and hash for a list of files from Git in a single git command.
     
-#     Args:
-#         session: Session object
-#         repo_root: Path to the root of the repository.
-    
-#     Returns:
-#         A Repo object.
-#     """
-#     uri = str(repo_root.resolve())
-#     git_owner_account = "unknown"
-#     repo = get_or_create_repo(session,uri=uri, git_owner_account=git_owner_account)
-#     return repo
+    Args:
+        file_paths: List of file paths to get commit info for.
+        repo_root: Root of the Git repository.
 
-# def get_or_create_file_in_db(session: Session, repo_id: int, file_path: str) -> File:
-#     """Get or create a file record.
-    
-#     Args:
-#         session: Session object
-#         repo_id: Repository ID
-#         file_path: Path to the file relative to the repository root.
-    
-#     Returns:
-#         A File object.
-#     """
+    Returns:
+        A dictionary of file paths and their most recent commit date and hash.
+    """
 
-#     file = get_or_create_file(session,repo_id=repo_id, file_path=file_path)
-#     return file
+    if not file_paths:
+        return {}
+
+    # check if we're in the git repository
+    git_dir = repo_root / ".git"
+    if not git_dir.exists() or not git_dir.is_dir():
+        raise ValueError(
+            f"Directory is not a git repository: {repo_root}. "
+            "Only git repositories are supported."
+        )
+
+    try:
+        # convert absolute file paths to relative paths from repo root
+        rel_paths = []
+        path_mapping = {}
+
+        for file_path in file_paths:
+            try:
+                rel_path = file_path.relative_to(repo_root)
+                # Normalize to forward slashes (git always uses forward slashes)
+                rel_path_str = rel_path.as_posix()
+                rel_paths.append(rel_path_str)
+                path_mapping[rel_path_str] = file_path
+            except ValueError:
+                # file is not under repo_root, skip it
+                continue
+        if not rel_paths:
+            return {path: (None, None) for path in file_paths}
+
+        # run a single Git command to get the most recent commit date and hash for all files in the repository
+        # Use --format with delimiter to separate hash and date
+        # Use --name-only to get file paths associated with each commit
+        # Use -- to separate file paths from the command options
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%H|%ai", "--name-only", "--"] + rel_paths,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,  
+            timeout=10,  # Longer timeout for many files
+        )
+
+        # Initialize result dict with None values
+        commit_info = {path: (None, None) for path in file_paths}
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            # No commits found or error
+            return commit_info
+
+        # Parse output: Git outputs commit info followed by file paths
+        # Format: "hash|YYYY-MM-DD HH:MM:SS +TZ\n" followed by file paths (one per line)
+        # Multiple files in the same commit will share the same commit line
+        lines = result.stdout.strip().split('\n')
+        current_hash = None
+        current_date = None
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check whether this line has commit info (hash|date)
+            if '|' in line and len(line.split('|')) == 2:
+                parts = line.split('|')
+                current_hash = parts[0]
+                date_str = parts[1]
+                
+                # Parse datetime
+                try:
+                    # Remove timezone offset if present
+                    if "+" in date_str or date_str.count("-") > 2:
+                        date_str = date_str.rsplit(" ", 1)[0]
+                    current_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    logger.warning("get_git_commit_info_batch() failed to parse date: %s", date_str)
+                    current_date = None
+                    current_hash = None
+            else:
+                # This line is a file path (relative to repo root)
+                if line in path_mapping:
+                    original_path = path_mapping[line]
+                    if current_hash and current_date:
+                        commit_info[original_path] = (current_date, current_hash)
+                    # Don't reset - same commit can apply to multiple files
+
+        return commit_info
+    except subprocess.TimeoutExpired:
+        logger.warning("get_git_commit_info_batch() timeout getting commit info")
+        return {path: (None, None) for path in file_paths}
+    except FileNotFoundError:
+        # Git is not installed
+        logger.debug("get_git_commit_info_batch() Git not found")
+        return {path: (None, None) for path in file_paths}
+    except Exception as e:
+        logger.warning("get_git_commit_info_batch() error getting commit info for %s: %s", file_paths, e)
+        return {path: (None, None) for path in file_paths}
 
 def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: bool = True, respect_gitignore: bool = True, skip_git_commit_info: bool = False) -> tuple[list[FileRecord], RepositorySummary]:
     """Scan the repository and return a list of file records and a summary of the repository contents.
@@ -844,8 +921,13 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: 
         )
 
     file_records: list[FileRecord] = []
-    filenames = walk_the_repo(repo_root, skip_dirs, respect_gitignore)
+    filenames = list(walk_the_repo(repo_root, skip_dirs, respect_gitignore))
     
+    # get commit info for all files in a single git command
+    if skip_git_commit_info:
+        commit_info = {filename: (None, None) for filename in filenames}
+    else:
+        commit_info = get_git_commit_info_batch(filenames, repo_root)
     
     total_files = 0
     files_without_extension = 0
@@ -879,7 +961,7 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: 
         if skip_git_commit_info:
             commit_date, commit_hash = None, None
         else:
-            commit_date, commit_hash = get_git_commit_info(filename, repo_root)
+            commit_date, commit_hash = commit_info.get(filename, (None, None))
         
         new_file_record = FileRecord(
             relative_dir=relative_dir,
