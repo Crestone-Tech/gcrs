@@ -27,10 +27,11 @@ dev = [
     "httpx>=0.27",
     "pytest-cov>=6.0",
     "ruff>=0.8.0",
+    "testcontainers[postgres]>=4.9.0",
 ]
 
 [tool.pytest.ini_options]
-addopts = "-q --log-cli-level=INFO"
+addopts = "-q --log-cli-level=INFO --durations=10"
 
 [tool.ruff]
 # Set the maximum line length to 120 characters

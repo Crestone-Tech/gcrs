@@ -7,6 +7,7 @@ Green Cloud Repository Scanner - scans a repository and generates a bill of mate
 - Python 3.11 or higher
 - pip
 - Git (optional, but recommended for commit information in scan results)
+- Docker Desktop (required for running database tests)
 
 ### Installation
 
@@ -755,3 +756,47 @@ For a JSON output, the generated file (e.g., `sample_repo_20241210_143022.scan.j
   "technologies": []
 }
 ```
+
+## Testing
+
+### Prerequisites for Testing
+
+To run the test suite, you need:
+
+1. **Docker Desktop** - Must be installed and running
+   - Database tests use testcontainers to spin up a real PostgreSQL instance
+   - This ensures tests match production exactly
+   - Download from: https://www.docker.com/products/docker-desktop
+
+2. **Development dependencies** - Install with:
+   ```bash
+   pip install -e ".[dev]"
+   ```
+
+### Running Tests
+
+Run all tests:
+```bash
+pytest
+```
+
+Run specific test files:
+```bash
+pytest tests/db/test_services.py
+pytest tests/core/test_scanner.py
+```
+
+Run with verbose output:
+```bash
+pytest -v
+```
+
+### Database Tests
+
+Database tests use **testcontainers** to automatically spin up a PostgreSQL container. This ensures:
+- Tests run against the same database type as production
+- No manual database setup required
+- Clean database state for each test run
+- Tests are isolated and reproducible
+
+**Note:** If Docker is not running, database tests will be skipped with a clear error message.

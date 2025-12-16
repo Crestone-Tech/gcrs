@@ -17,6 +17,49 @@ from gcrs.core.scanner import do_the_repo_scan, get_git_commit_info
 from gcrs.models import FileRecord
 
 
+def _init_git_repo(repo_root: Path) -> None:
+    """Initialize a git repository and commit all files.
+    
+    Args:
+        repo_root: Path to the repository root directory.
+    """
+    # Initialize git repository
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    
+    # Configure git user (required for commits)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test User"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    
+    # Add all files and commit
+    subprocess.run(
+        ["git", "add", "-A"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "commit", "-m", "Initial commit"],
+        cwd=repo_root,
+        check=True,
+        capture_output=True,
+    )
+
+
 class TestGetGitCommitInfo:
     """Tests for the get_git_commit_info function."""
 
@@ -249,6 +292,9 @@ class TestDoTheRepoScanWithCommitInfo:
         test_file = tmp_path / "test.py"
         test_file.write_text("# test file")
         
+        # Initialize as git repository (required for do_the_repo_scan)
+        _init_git_repo(tmp_path)
+        
         # Mock get_git_commit_info to return commit info
         mock_commit_date = datetime(2025, 1, 15, 14, 30, 0)
         mock_commit_hash = "a1b2c3d4e5f6789012345678901234567890abcd"
@@ -257,7 +303,7 @@ class TestDoTheRepoScanWithCommitInfo:
             "gcrs.core.scanner.get_git_commit_info",
             return_value=(mock_commit_date, mock_commit_hash)
         ):
-            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False)
+            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         
         assert len(file_records) > 0
         # Find the test.py file record
@@ -272,12 +318,15 @@ class TestDoTheRepoScanWithCommitInfo:
         test_file = tmp_path / "test.py"
         test_file.write_text("# test file")
         
+        # Initialize as git repository (required for do_the_repo_scan)
+        _init_git_repo(tmp_path)
+        
         # Mock get_git_commit_info to return None (no Git repo or file not tracked)
         with patch(
             "gcrs.core.scanner.get_git_commit_info",
             return_value=(None, None)
         ):
-            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False)
+            file_records, _ = do_the_repo_scan(tmp_path, respect_gitignore=False, persist_to_db=False, skip_git_commit_info=False)
         
         assert len(file_records) > 0
         # Find the test.py file record

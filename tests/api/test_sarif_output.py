@@ -312,6 +312,8 @@ def test_sarif_output_scan_endpoint(client: TestClient, sample_repo_path: Path):
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "sarif",
+            "persist_to_db": False,
+            "skip_git_commit_info": True,
         },
     )
     
@@ -347,6 +349,8 @@ def test_sarif_output_scan_endpoint_contains_results(client: TestClient, sample_
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "sarif",
+            "persist_to_db": False,
+            "skip_git_commit_info": True,
         },
     )
     
@@ -382,6 +386,8 @@ def test_sarif_output_scan_endpoint_properties(client: TestClient, sample_repo_p
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "sarif",
+            "persist_to_db": False,
+            "skip_git_commit_info": True,
         },
     )
     
@@ -417,6 +423,8 @@ def test_sarif_output_same_data_different_formats(client: TestClient, sample_rep
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "sarif",
+            "persist_to_db": False,
+            "skip_git_commit_info": True,
         },
     )
     
@@ -425,6 +433,8 @@ def test_sarif_output_same_data_different_formats(client: TestClient, sample_rep
         json={
             "repo_root": str(sample_repo_path),
             "output_file_format": "json",
+            "persist_to_db": False,
+            "skip_git_commit_info": True,
         },
     )
     

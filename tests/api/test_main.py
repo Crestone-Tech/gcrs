@@ -25,7 +25,7 @@ def test_health_endpoint(client: TestClient):
 
 def test_scan_summary_endpoint(client: TestClient, sample_repo_path: Path):
     """Test the scan summary endpoint returns a successful response with required fields."""
-    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path)})
+    response = client.post("/scan/summary", json={"repo_root": str(sample_repo_path), "persist_to_db": False, "write_output_file": False, "skip_git_commit_info": True})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
