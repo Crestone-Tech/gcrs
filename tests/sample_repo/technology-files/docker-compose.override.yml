@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  web:
+    environment:
+      - DEBUG=true
+    volumes:
+      - .:/app
+      - /app/node_modules
+

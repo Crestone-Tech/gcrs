@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = ">=2.25.0"
+flask = ">=2.0.0"
+sqlalchemy = ">=1.4.0"
+
+[dev-packages]
+pytest = ">=6.0.0"
+pytest-cov = ">=2.0.0"
+black = ">=21.0.0"
+
+[requires]
+python_version = "3.8"
+
