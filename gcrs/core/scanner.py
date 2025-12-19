@@ -180,7 +180,7 @@ TECHNOLOGY_FROM_DEPENDENCIES = {
 
 TECHNOLOGY_PATTERNS = {
     # Infrastructure and tools
-    "Dockerfile": "Docker",
+    "dockerfile": "Docker",
     "docker-compose.yml": "Docker",
     "docker-compose.yaml": "Docker",
     "docker-compose.override.yml": "Docker",
@@ -952,10 +952,37 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: 
         language = LANGUAGE_BY_EXT.get(extension, None)
         category = CATEGORY_BY_EXT.get(extension, None)
         data_type = DATA_TYPES_BY_EXTENSION.get(extension, None)
+        
+        # Check for technology patterns
+        # First try exact filename match
         technology = TECHNOLOGY_PATTERNS.get(name.lower(), None)
+        
+        # If no exact match, check extension-based patterns (e.g., ".tf" for Terraform)
+        if not technology and extension:
+            technology = TECHNOLOGY_PATTERNS.get(extension, None)
+        
+        # If still no match, check substring patterns (e.g., "k8s" or "ansible" in filename)
+        if not technology:
+            name_lower = name.lower()
+            for pattern, tech_value in TECHNOLOGY_PATTERNS.items():
+                # Skip patterns that are extensions (start with ".") or exact matches we already checked
+                if not pattern.startswith(".") and pattern not in TECHNOLOGY_FROM_DEPENDENCIES:
+                    if pattern in name_lower:
+                        technology = tech_value
+                        break
+        
         dependency_kind = DEPENDENCY_KIND_BY_NAME.get(name, None)
         size_bytes = filename.stat().st_size
         is_binary = is_binary_ext(extension)
+    
+        # Collect technologies from multiple sources
+        technologies = []
+        if technology:
+            technologies.append(technology)
+        if dependency_kind:
+            dependency_technology = DEPENDENCY_TO_TECHNOLOGY.get(dependency_kind, None)
+            if dependency_technology and dependency_technology not in technologies:
+                technologies.append(dependency_technology)
     
         # Get Git commit information (skip if requested for performance)
         if skip_git_commit_info:
@@ -971,7 +998,7 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: 
             category=category,
             language=language,
             data_type=data_type,
-            # technologies=technology,  # TODO: add technologies to the file record
+            technologies=technologies,
             dependency_kind=dependency_kind,
             size_bytes=size_bytes,
             is_binary=is_binary,
@@ -996,8 +1023,9 @@ def do_the_repo_scan(repo_root: Path, skip_dirs: list[str] = [], persist_to_db: 
             files_by_dependency_counter[dependency_kind] += 1
         if data_type:
             data_files_by_extension_counter[data_type] += 1
-        if technology:
-            files_by_technology_counter[technology] += 1
+        # Count all technologies (from both pattern matches and dependency files)
+        for tech in technologies:
+            files_by_technology_counter[tech] += 1
 
     if persist_to_db and not skip_git_commit_info:
         # Persist scan results to database using a single session
