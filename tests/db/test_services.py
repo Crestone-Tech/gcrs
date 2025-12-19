@@ -1,6 +1,6 @@
 """Tests for database service layer functions."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -550,11 +550,12 @@ class TestPersistScanResults:
         assert len(files) == 2
 
     def test_persist_scan_results_missing_commit_hash(self, test_db_session: Session, tmp_path: Path):
-        """Test that persist_scan_results raises error for files without commit hash."""
+        """Test that persist_scan_results skips files without commit hash and raises error if all files are missing."""
         repo_path = tmp_path / "test_repo"
         repo_path.mkdir()
         (repo_path / ".git").mkdir()
 
+        # Test 1: Single file without commit hash - should raise error (all files missing)
         file_records = [
             FileRecord(
                 name="test.py",
@@ -572,13 +573,141 @@ class TestPersistScanResults:
             output_file_format="json",
         )
 
-        with pytest.raises(ValueError, match="has no commit hash"):
+        # Should raise error when ALL files are missing commit hashes
+        with pytest.raises(ValueError, match="No files with commit hashes found"):
             persist_scan_results(
                 session=test_db_session,
                 repo_root=repo_path,
                 file_records=file_records,
                 scan_params=scan_params,
             )
+        
+        # Test 2: Mix of files with and without commit hashes - should skip files without hashes
+        file_records = [
+            FileRecord(
+                name="test.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "test.py"),
+                size_bytes=100,
+                is_binary=False,
+                most_recent_commit_hash="abc123",  # Has commit hash
+                most_recent_commit_date=datetime.now(timezone.utc),
+            ),
+            FileRecord(
+                name="untracked.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "untracked.py"),
+                size_bytes=50,
+                is_binary=False,
+                most_recent_commit_hash=None,  # Missing commit hash - should be skipped
+                most_recent_commit_date=None,
+            ),
+        ]
+
+        # Should succeed, skipping the file without commit hash
+        bom = persist_scan_results(
+            session=test_db_session,
+            repo_root=repo_path,
+            file_records=file_records,
+            scan_params=scan_params,
+        )
+        
+        assert bom is not None
+        # Verify only the file with commit hash was persisted
+        from gcrs.db.models import BOMFile, FileVersion
+        bom_files = test_db_session.query(BOMFile).filter(BOMFile.bom_id == bom.id).all()
+        assert len(bom_files) == 1  # Only one file persisted
+    
+    def test_persist_scan_results_strict_mode(self, test_db_session: Session, tmp_path: Path):
+        """Test that strict_uncommitted_files parameter causes failure when files lack commit hashes."""
+        repo_path = tmp_path / "test_repo"
+        repo_path.mkdir()
+        (repo_path / ".git").mkdir()
+        
+        # Test: Strict mode should fail when any file lacks commit hash
+        file_records = [
+            FileRecord(
+                name="test.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "test.py"),
+                size_bytes=100,
+                is_binary=False,
+                most_recent_commit_hash="abc123",  # Has commit hash
+                most_recent_commit_date=datetime.now(timezone.utc),
+            ),
+            FileRecord(
+                name="untracked.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "untracked.py"),
+                size_bytes=50,
+                is_binary=False,
+                most_recent_commit_hash=None,  # Missing commit hash
+                most_recent_commit_date=None,
+            ),
+        ]
+        
+        scan_params = ScanParams(
+            repo_root=str(repo_path),
+            output_file_format="json",
+            strict_uncommitted_files=True,  # Enable strict mode
+        )
+        
+        # Should raise error in strict mode when any file lacks commit hash
+        with pytest.raises(ValueError, match="Strict mode enabled"):
+            persist_scan_results(
+                session=test_db_session,
+                repo_root=repo_path,
+                file_records=file_records,
+                scan_params=scan_params,
+            )
+    
+    def test_persist_scan_results_warn_mode_disabled(self, test_db_session: Session, tmp_path: Path):
+        """Test that warn_on_uncommitted_files=False skips files silently."""
+        repo_path = tmp_path / "test_repo"
+        repo_path.mkdir()
+        (repo_path / ".git").mkdir()
+        
+        file_records = [
+            FileRecord(
+                name="test.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "test.py"),
+                size_bytes=100,
+                is_binary=False,
+                most_recent_commit_hash="abc123",  # Has commit hash
+                most_recent_commit_date=datetime.now(timezone.utc),
+            ),
+            FileRecord(
+                name="untracked.py",
+                relative_dir=".",
+                absolute_filename=str(repo_path / "untracked.py"),
+                size_bytes=50,
+                is_binary=False,
+                most_recent_commit_hash=None,  # Missing commit hash
+                most_recent_commit_date=None,
+            ),
+        ]
+        
+        scan_params = ScanParams(
+            repo_root=str(repo_path),
+            output_file_format="json",
+            strict_uncommitted_files=False,  # Not strict
+            warn_on_uncommitted_files=False,  # Silent mode
+        )
+        
+        # Should succeed silently (no warning logged)
+        bom = persist_scan_results(
+            session=test_db_session,
+            repo_root=repo_path,
+            file_records=file_records,
+            scan_params=scan_params,
+        )
+        
+        assert bom is not None
+        # Verify only the file with commit hash was persisted
+        from gcrs.db.models import BOMFile
+        bom_files = test_db_session.query(BOMFile).filter(BOMFile.bom_id == bom.id).all()
+        assert len(bom_files) == 1  # Only one file persisted
 
 
 class TestGetRepoSummaryFromDB:

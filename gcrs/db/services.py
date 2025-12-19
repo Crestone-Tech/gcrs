@@ -492,12 +492,28 @@ def persist_scan_results(
         else:
             files_without_commits.append(file_record)
     
+    # Handle files without commit hashes based on configuration
+    strict_mode = scan_params.strict_uncommitted_files if hasattr(scan_params, 'strict_uncommitted_files') else False
+    warn_mode = scan_params.warn_on_uncommitted_files if hasattr(scan_params, 'warn_on_uncommitted_files') else True
+    
     if files_without_commits:
-        logger.warning(
-            "Skipping %d file(s) without commit hashes (untracked or uncommitted): %s",
-            len(files_without_commits),
-            [f.name for f in files_without_commits[:10]],  # Show first 10
-        )
+        if strict_mode:
+            # Strict mode: fail immediately if any files lack commit hashes
+            file_names = [f.name for f in files_without_commits[:10]]
+            if len(files_without_commits) > 10:
+                file_names.append(f"... and {len(files_without_commits) - 10} more")
+            raise ValueError(
+                f"Strict mode enabled: {len(files_without_commits)} file(s) without commit hashes found. "
+                f"All files must be committed before scanning. Files: {', '.join(file_names)}"
+            )
+        elif warn_mode:
+            # Warn mode: log warning but continue
+            logger.warning(
+                "Skipping %d file(s) without commit hashes (untracked or uncommitted): %s",
+                len(files_without_commits),
+                [f.name for f in files_without_commits[:10]],  # Show first 10
+            )
+        # Silent mode: skip without warning (warn_mode=False)
     
     if not files_with_commits:
         raise ValueError(

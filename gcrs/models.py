@@ -139,6 +139,16 @@ class ScanParams(BaseModel):
         description="Whether to respect .gitignore files during scanning",
         json_schema_extra={"example": True},
     )
+    strict_uncommitted_files: bool = Field(
+        default=False,
+        description="If True, fail scan when any files lack commit hashes. If False, skip uncommitted files with a warning.",
+        json_schema_extra={"example": False},
+    )
+    warn_on_uncommitted_files: bool = Field(
+        default=True,
+        description="If True, log warnings for files without commit hashes. Only applies when strict_uncommitted_files is False.",
+        json_schema_extra={"example": True},
+    )
     
     @field_validator('repo_root', mode='after')
     @classmethod
